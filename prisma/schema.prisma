@@ -1,0 +1,363 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  role          Role
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  isActive      Boolean   @default(true)
+
+  employerProfile   EmployerProfile?
+  jobSeekerProfile  JobSeekerProfile?
+  learnerProfile    LearnerProfile?
+  providerProfile   ProviderProfile?
+  sentMessages      Message[]         @relation("SentMessages")
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+}
+
+enum Role {
+  SUPER_ADMIN
+  INTERNAL_STAFF
+  TRAINING_PROVIDER
+  EMPLOYER
+  LEARNER
+  JOB_SEEKER
+}
+
+model EmployerProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  companyName     String
+  companyLogo     String?
+  industry        String?
+  companySize     String?
+  location        String?
+  website         String?
+  description     String?
+  linkedIn        String?
+  twitter         String?
+  isVerified      Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  jobs            Job[]
+  interviews      Interview[]
+}
+
+model JobSeekerProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id])
+  headline          String?
+  bio               String?
+  phone             String?
+  location          String?
+  photo             String?
+  cvFile            String?
+  cvText            String?
+  skills            String    @default("[]")
+  desiredRoles      String    @default("[]")
+  desiredSalaryMin  Int?
+  desiredSalaryMax  Int?
+  desiredLocation   String?
+  remotePreference  String?
+  linkedIn          String?
+  github            String?
+  portfolio         String?
+  profileComplete   Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  experiences       Experience[]
+  educations        Education[]
+  certificates      Certificate[]
+  applications      Application[]
+  matches           JobMatch[]
+}
+
+model LearnerProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id])
+  providerId        String
+  provider          ProviderProfile   @relation(fields: [providerId], references: [id])
+  cohortId          String?
+  cohort            Cohort?   @relation(fields: [cohortId], references: [id])
+  headline          String?
+  bio               String?
+  phone             String?
+  location          String?
+  photo             String?
+  cvFile            String?
+  cvText            String?
+  skills            String    @default("[]")
+  desiredRoles      String    @default("[]")
+  desiredSalaryMin  Int?
+  desiredSalaryMax  Int?
+  desiredLocation   String?
+  remotePreference  String?
+  linkedIn          String?
+  github            String?
+  portfolio         String?
+  courseName        String?
+  courseSector      String?
+  courseStartDate   DateTime?
+  courseEndDate     DateTime?
+  ragStatus         String    @default("GREEN")
+  ms1Achieved       Boolean   @default(false)
+  ms2Achieved       Boolean   @default(false)
+  ms3Achieved       Boolean   @default(false)
+  ms1Date           DateTime?
+  ms2Date           DateTime?
+  ms3Date           DateTime?
+  profileComplete   Int       @default(0)
+  credentialsSent   Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  experiences       Experience[]
+  educations        Education[]
+  certificates      Certificate[]
+  applications      Application[]
+  matches           JobMatch[]
+}
+
+model ProviderProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  organisationName String
+  logo            String?
+  website         String?
+  location        String?
+  description     String?
+  contactName     String?
+  contactEmail    String?
+  contactPhone    String?
+  isActive        Boolean   @default(true)
+  billingStatus   String    @default("ACTIVE")
+  monthlyFee      Float     @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  learners        LearnerProfile[]
+  courses         Course[]
+  cohorts         Cohort[]
+}
+
+model Course {
+  id              String    @id @default(cuid())
+  providerId      String
+  provider        ProviderProfile   @relation(fields: [providerId], references: [id])
+  name            String
+  sector          String
+  requiredSkills  String    @default("[]")
+  duration        String?
+  description     String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  cohorts         Cohort[]
+}
+
+model Cohort {
+  id                String    @id @default(cuid())
+  providerId        String
+  provider          ProviderProfile   @relation(fields: [providerId], references: [id])
+  courseId          String
+  course            Course    @relation(fields: [courseId], references: [id])
+  name              String
+  startDate         DateTime?
+  endDate           DateTime?
+  expectedLearners  Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  learners          LearnerProfile[]
+}
+
+model Experience {
+  id                String    @id @default(cuid())
+  jobSeekerId       String?
+  jobSeeker         JobSeekerProfile? @relation(fields: [jobSeekerId], references: [id])
+  learnerId         String?
+  learner           LearnerProfile?   @relation(fields: [learnerId], references: [id])
+  title             String
+  company           String
+  location          String?
+  startDate         DateTime?
+  endDate           DateTime?
+  current           Boolean   @default(false)
+  description       String?
+  createdAt         DateTime  @default(now())
+}
+
+model Education {
+  id                String    @id @default(cuid())
+  jobSeekerId       String?
+  jobSeeker         JobSeekerProfile? @relation(fields: [jobSeekerId], references: [id])
+  learnerId         String?
+  learner           LearnerProfile?   @relation(fields: [learnerId], references: [id])
+  institution       String
+  degree            String?
+  field             String?
+  startDate         DateTime?
+  endDate           DateTime?
+  current           Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+}
+
+model Certificate {
+  id                String    @id @default(cuid())
+  jobSeekerId       String?
+  jobSeeker         JobSeekerProfile? @relation(fields: [jobSeekerId], references: [id])
+  learnerId         String?
+  learner           LearnerProfile?   @relation(fields: [learnerId], references: [id])
+  name              String
+  issuer            String?
+  issueDate         DateTime?
+  fileUrl           String?
+  createdAt         DateTime  @default(now())
+}
+
+model Job {
+  id                String    @id @default(cuid())
+  employerId        String?
+  employer          EmployerProfile?  @relation(fields: [employerId], references: [id])
+  title             String
+  company           String
+  location          String
+  sector            String
+  jobType           String?
+  salaryMin         Int?
+  salaryMax         Int?
+  description       String
+  requiredSkills    String    @default("[]")
+  experienceLevel   String?
+  deadline          DateTime?
+  sourceType        String    @default("INTERNAL")
+  sourceUrl         String?
+  sourceBoardId     String?
+  externalId        String?   @unique
+  status            String    @default("ACTIVE")
+  isRemote          Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  applications      Application[]
+  matches           JobMatch[]
+}
+
+model JobMatch {
+  id                String    @id @default(cuid())
+  jobId             String
+  job               Job       @relation(fields: [jobId], references: [id])
+  jobSeekerId       String?
+  jobSeeker         JobSeekerProfile? @relation(fields: [jobSeekerId], references: [id])
+  learnerId         String?
+  learner           LearnerProfile?   @relation(fields: [learnerId], references: [id])
+  matchScore        Int
+  matchedSkills     String    @default("[]")
+  missingSkills     String    @default("[]")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Application {
+  id                String    @id @default(cuid())
+  jobId             String
+  job               Job       @relation(fields: [jobId], references: [id])
+  jobSeekerId       String?
+  jobSeeker         JobSeekerProfile? @relation(fields: [jobSeekerId], references: [id])
+  learnerId         String?
+  learner           LearnerProfile?   @relation(fields: [learnerId], references: [id])
+  status            String    @default("APPLIED")
+  coverNote         String?
+  matchScore        Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  messages          Message[]
+  interviews        Interview[]
+}
+
+model Message {
+  id                String    @id @default(cuid())
+  applicationId     String
+  application       Application @relation(fields: [applicationId], references: [id])
+  senderId          String
+  sender            User      @relation("SentMessages", fields: [senderId], references: [id])
+  content           String
+  createdAt         DateTime  @default(now())
+  isRead            Boolean   @default(false)
+}
+
+model Interview {
+  id                String    @id @default(cuid())
+  applicationId     String
+  application       Application @relation(fields: [applicationId], references: [id])
+  employerId        String
+  employer          EmployerProfile @relation(fields: [employerId], references: [id])
+  proposedSlots     String    @default("[]")
+  confirmedSlot     DateTime?
+  status            String    @default("PENDING")
+  location          String?
+  meetingLink       String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model JobBoard {
+  id                String    @id @default(cuid())
+  name              String
+  boardType         String
+  apiKey            String?
+  feedUrl           String?
+  genericUrl        String?
+  schedule          String    @default("DAILY")
+  isActive          Boolean   @default(true)
+  lastFetchedAt     DateTime?
+  lastJobCount      Int       @default(0)
+  lastError         String?
+  fieldMappings     String    @default("{}")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model SystemSetting {
+  id                String    @id @default(cuid())
+  key               String    @unique
+  value             String
+  updatedAt         DateTime  @updatedAt
+}
+
+model Notification {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id])
+  title             String
+  body              String
+  type              String
+  isRead            Boolean   @default(false)
+  link              String?
+  createdAt         DateTime  @default(now())
+}
+
+model AuditLog {
+  id                String    @id @default(cuid())
+  userId            String?
+  user              User?     @relation(fields: [userId], references: [id])
+  action            String
+  entity            String
+  entityId          String?
+  detail            String?
+  ipAddress         String?
+  createdAt         DateTime  @default(now())
+}
