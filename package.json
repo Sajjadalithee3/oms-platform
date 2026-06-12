@@ -13,12 +13,16 @@
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
+    "fast-xml-parser": "^5.8.0",
     "lucide-react": "^1.17.0",
+    "mammoth": "^1.12.0",
     "next": "14.2.35",
     "next-auth": "^5.0.0-beta.25",
+    "pdf-parse": "^2.4.5",
     "prisma": "^6.19.3",
     "react": "^18",
     "react-dom": "^18",
+    "recharts": "^3.8.1",
     "tailwind-merge": "^3.6.0"
   },
   "prisma": {
@@ -27,6 +31,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
