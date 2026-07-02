@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
+import { useSearchParams } from "next/navigation"
 import { TopBar } from "@/components/dashboard/TopBar"
 import { ProfileProgress } from "@/components/shared/ProfileProgress"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -11,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { CVUpload } from "@/components/candidates/CVUpload"
-import { Save, Plus, Trash2, X } from "lucide-react"
+import { Save, Plus, Trash2, X, Upload, Edit3 } from "lucide-react"
 import type { ParsedCV } from "@/lib/cv-parser"
 
 interface Experience {
@@ -45,7 +46,8 @@ interface Certificate {
 
 export default function JobSeekerProfilePage() {
   useSession()
-  const [activeTab, setActiveTab] = useState("personal")
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "personal")
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState("")
   const [completion, setCompletion] = useState({ percentage: 0, incomplete: [] as string[] })
@@ -123,13 +125,19 @@ export default function JobSeekerProfilePage() {
     })
     if (res.ok) {
       const data = await res.json()
-      setExperiences([...experiences, data])
+      setExperiences((prev) => [...prev, data])
+      if (data.profileComplete != null) setCompletion((c) => ({ ...c, percentage: data.profileComplete }))
     }
+    return res.ok
   }
 
   async function deleteExperience(id: string) {
-    await fetch(`/api/candidates/experience?id=${id}`, { method: "DELETE" })
-    setExperiences(experiences.filter((e) => e.id !== id))
+    const res = await fetch(`/api/candidates/experience?id=${id}`, { method: "DELETE" })
+    if (res.ok) {
+      const data = await res.json()
+      setExperiences((prev) => prev.filter((e) => e.id !== id))
+      if (data.profileComplete != null) setCompletion((c) => ({ ...c, percentage: data.profileComplete }))
+    }
   }
 
   async function addEducation(edu: Education) {
@@ -140,13 +148,19 @@ export default function JobSeekerProfilePage() {
     })
     if (res.ok) {
       const data = await res.json()
-      setEducations([...educations, data])
+      setEducations((prev) => [...prev, data])
+      if (data.profileComplete != null) setCompletion((c) => ({ ...c, percentage: data.profileComplete }))
     }
+    return res.ok
   }
 
   async function deleteEducation(id: string) {
-    await fetch(`/api/candidates/education?id=${id}`, { method: "DELETE" })
-    setEducations(educations.filter((e) => e.id !== id))
+    const res = await fetch(`/api/candidates/education?id=${id}`, { method: "DELETE" })
+    if (res.ok) {
+      const data = await res.json()
+      setEducations((prev) => prev.filter((e) => e.id !== id))
+      if (data.profileComplete != null) setCompletion((c) => ({ ...c, percentage: data.profileComplete }))
+    }
   }
 
   async function addCertificate(cert: Certificate) {
@@ -157,25 +171,46 @@ export default function JobSeekerProfilePage() {
     })
     if (res.ok) {
       const data = await res.json()
-      setCertificates([...certificates, data])
+      setCertificates((prev) => [...prev, data])
+      if (data.profileComplete != null) setCompletion((c) => ({ ...c, percentage: data.profileComplete }))
     }
   }
 
   async function deleteCertificate(id: string) {
-    await fetch(`/api/candidates/certificates?id=${id}`, { method: "DELETE" })
-    setCertificates(certificates.filter((c) => c.id !== id))
+    const res = await fetch(`/api/candidates/certificates?id=${id}`, { method: "DELETE" })
+    if (res.ok) {
+      const data = await res.json()
+      setCertificates((prev) => prev.filter((c) => c.id !== id))
+      if (data.profileComplete != null) setCompletion((c) => ({ ...c, percentage: data.profileComplete }))
+    }
   }
 
-  function handleCVParsed(parsed: ParsedCV, fileName: string) {
+  async function handleCVParsed(parsed: ParsedCV, fileName: string) {
     setProfile((p) => ({
       ...p,
       cvFile: fileName,
       cvText: parsed.rawText.substring(0, 5000),
+      headline: p.headline || parsed.name,
       phone: p.phone || parsed.phone,
       location: p.location || parsed.location,
     }))
     if (parsed.skills.length > 0) {
       setSkills((prev) => Array.from(new Set([...prev, ...parsed.skills])))
+    }
+    for (const exp of parsed.experience) {
+      if (exp.title && exp.company) {
+        await addExperience({ title: exp.title, company: exp.company, startDate: exp.startDate, endDate: exp.endDate, current: exp.current, description: exp.description })
+      }
+    }
+    for (const edu of parsed.education) {
+      if (edu.institution) {
+        await addEducation({ institution: edu.institution, degree: edu.degree, field: edu.field, startDate: edu.startDate, endDate: edu.endDate, current: edu.current })
+      }
+    }
+    for (const cert of parsed.certificates) {
+      if (cert.name) {
+        await addCertificate({ name: cert.name, issuer: cert.issuer, issueDate: cert.issueDate })
+      }
     }
   }
 
@@ -199,6 +234,21 @@ export default function JobSeekerProfilePage() {
     <>
       <TopBar title="My Profile" notificationCount={0} />
       <div className="p-6 space-y-6 max-w-4xl">
+        {completion.percentage < 30 && (
+          <div className="bg-gradient-to-r from-[#5B4FE8]/10 to-[#5B4FE8]/5 border border-[#5B4FE8]/20 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-[#1A1A2E] mb-2">Welcome! Complete your profile to get started</h2>
+            <p className="text-sm text-gray-600 mb-4">A complete profile helps employers find you and improves your job match scores. You can upload your CV to auto-fill your profile, or fill it in manually.</p>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => setActiveTab("cv")} className="bg-[#5B4FE8] hover:bg-[#4A3FD8]">
+                <Upload className="h-4 w-4 mr-2" />Upload CV to Auto-Fill
+              </Button>
+              <Button variant="outline" onClick={() => setActiveTab("personal")}>
+                <Edit3 className="h-4 w-4 mr-2" />Fill Manually
+              </Button>
+            </div>
+          </div>
+        )}
+
         <ProfileProgress
           percentage={completion.percentage}
           incomplete={completion.incomplete}

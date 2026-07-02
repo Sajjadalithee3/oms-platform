@@ -53,6 +53,7 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error("CV upload error:", error)
-    return NextResponse.json({ error: "Failed to parse CV" }, { status: 500 })
+    const msg = error instanceof Error ? error.message : "Failed to parse CV"
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
