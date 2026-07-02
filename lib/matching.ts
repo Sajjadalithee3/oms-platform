@@ -92,13 +92,7 @@ export function calculateMatchScore(candidate: CandidateProfile, job: JobData): 
   return { score: Math.min(totalScore, 100), matchedSkills, missingSkills }
 }
 
-async function getMinThreshold(): Promise<number> {
-  const setting = await prisma.systemSetting.findUnique({ where: { key: "min_match_threshold" } })
-  return setting ? parseInt(setting.value) : 40
-}
-
 export async function runMatchingForCandidate(candidateId: string, role: "JOB_SEEKER" | "LEARNER") {
-  const minThreshold = await getMinThreshold()
   let candidate: CandidateProfile & { courseSector?: string | null }
 
   if (role === "LEARNER") {
@@ -126,30 +120,27 @@ export async function runMatchingForCandidate(candidateId: string, role: "JOB_SE
 
   for (const job of jobs) {
     const result = calculateMatchScore(candidate, job)
-    if (result.score >= minThreshold) {
-      const matchData = {
-        matchScore: result.score,
-        matchedSkills: JSON.stringify(result.matchedSkills),
-        missingSkills: JSON.stringify(result.missingSkills),
-      }
-      const where = role === "LEARNER"
-        ? { jobId: job.id, learnerId: candidateId }
-        : { jobId: job.id, jobSeekerId: candidateId }
+    const matchData = {
+      matchScore: result.score,
+      matchedSkills: JSON.stringify(result.matchedSkills),
+      missingSkills: JSON.stringify(result.missingSkills),
+    }
+    const where = role === "LEARNER"
+      ? { jobId: job.id, learnerId: candidateId }
+      : { jobId: job.id, jobSeekerId: candidateId }
 
-      const existing = await prisma.jobMatch.findFirst({ where })
-      if (existing) {
-        await prisma.jobMatch.update({ where: { id: existing.id }, data: matchData })
-      } else {
-        await prisma.jobMatch.create({
-          data: { jobId: job.id, ...(role === "LEARNER" ? { learnerId: candidateId } : { jobSeekerId: candidateId }), ...matchData },
-        })
-      }
+    const existing = await prisma.jobMatch.findFirst({ where })
+    if (existing) {
+      await prisma.jobMatch.update({ where: { id: existing.id }, data: matchData })
+    } else {
+      await prisma.jobMatch.create({
+        data: { jobId: job.id, ...(role === "LEARNER" ? { learnerId: candidateId } : { jobSeekerId: candidateId }), ...matchData },
+      })
     }
   }
 }
 
 export async function runMatchingForJob(jobId: string) {
-  const minThreshold = await getMinThreshold()
   const job = await prisma.job.findUnique({ where: { id: jobId } })
   if (!job || job.status !== "ACTIVE") return
 
@@ -157,24 +148,20 @@ export async function runMatchingForJob(jobId: string) {
   for (const js of jobSeekers) {
     const candidate: CandidateProfile = { id: js.id, skills: js.skills, location: js.location, desiredRoles: js.desiredRoles, experiences: js.experiences }
     const result = calculateMatchScore(candidate, job)
-    if (result.score >= minThreshold) {
-      const existing = await prisma.jobMatch.findFirst({ where: { jobId: job.id, jobSeekerId: js.id } })
-      const data = { matchScore: result.score, matchedSkills: JSON.stringify(result.matchedSkills), missingSkills: JSON.stringify(result.missingSkills) }
-      if (existing) await prisma.jobMatch.update({ where: { id: existing.id }, data })
-      else await prisma.jobMatch.create({ data: { jobId: job.id, jobSeekerId: js.id, ...data } })
-    }
+    const existing = await prisma.jobMatch.findFirst({ where: { jobId: job.id, jobSeekerId: js.id } })
+    const data = { matchScore: result.score, matchedSkills: JSON.stringify(result.matchedSkills), missingSkills: JSON.stringify(result.missingSkills) }
+    if (existing) await prisma.jobMatch.update({ where: { id: existing.id }, data })
+    else await prisma.jobMatch.create({ data: { jobId: job.id, jobSeekerId: js.id, ...data } })
   }
 
-  const learners = await prisma.learnerProfile.findMany({ where: { courseSector: job.sector }, include: { experiences: true } })
+  const learners = await prisma.learnerProfile.findMany({ include: { experiences: true } })
   for (const l of learners) {
     const candidate: CandidateProfile = { id: l.id, skills: l.skills, location: l.location, desiredRoles: l.desiredRoles, courseSector: l.courseSector, experiences: l.experiences }
     const result = calculateMatchScore(candidate, job)
-    if (result.score >= minThreshold) {
-      const existing = await prisma.jobMatch.findFirst({ where: { jobId: job.id, learnerId: l.id } })
-      const data = { matchScore: result.score, matchedSkills: JSON.stringify(result.matchedSkills), missingSkills: JSON.stringify(result.missingSkills) }
-      if (existing) await prisma.jobMatch.update({ where: { id: existing.id }, data })
-      else await prisma.jobMatch.create({ data: { jobId: job.id, learnerId: l.id, ...data } })
-    }
+    const existing = await prisma.jobMatch.findFirst({ where: { jobId: job.id, learnerId: l.id } })
+    const data = { matchScore: result.score, matchedSkills: JSON.stringify(result.matchedSkills), missingSkills: JSON.stringify(result.missingSkills) }
+    if (existing) await prisma.jobMatch.update({ where: { id: existing.id }, data })
+    else await prisma.jobMatch.create({ data: { jobId: job.id, learnerId: l.id, ...data } })
   }
 }
 

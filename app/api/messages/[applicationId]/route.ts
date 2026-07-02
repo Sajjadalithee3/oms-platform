@@ -2,9 +2,38 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
+async function verifyApplicationAccess(applicationId: string, userId: string, userRole: string) {
+  const application = await prisma.application.findUnique({
+    where: { id: applicationId },
+    include: {
+      job: { include: { employer: true } },
+      jobSeeker: true,
+      learner: { include: { provider: true } },
+    },
+  })
+
+  if (!application) return null
+
+  if (userRole === "SUPER_ADMIN" || userRole === "INTERNAL_STAFF") return application
+
+  if (userRole === "JOB_SEEKER" && application.jobSeeker?.userId === userId) return application
+  if (userRole === "LEARNER" && application.learner?.userId === userId) return application
+  if (userRole === "EMPLOYER" && application.job.employer?.userId === userId) return application
+
+  if (userRole === "TRAINING_PROVIDER") {
+    const provider = await prisma.providerProfile.findUnique({ where: { userId } })
+    if (provider && application.learner?.providerId === provider.id) return application
+  }
+
+  return null
+}
+
 export async function GET(_request: Request, { params }: { params: { applicationId: string } }) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const application = await verifyApplicationAccess(params.applicationId, session.user.id, session.user.role)
+  if (!application) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const messages = await prisma.message.findMany({
     where: { applicationId: params.applicationId },
@@ -28,6 +57,9 @@ export async function POST(request: Request, { params }: { params: { application
     return NextResponse.json({ error: "Providers have read-only access to messages" }, { status: 403 })
   }
 
+  const application = await verifyApplicationAccess(params.applicationId, session.user.id, session.user.role)
+  if (!application) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
   const body = await request.json()
   const { content } = body
 
@@ -38,16 +70,11 @@ export async function POST(request: Request, { params }: { params: { application
     include: { sender: { select: { name: true, role: true } } },
   })
 
-  const application = await prisma.application.findUnique({
-    where: { id: params.applicationId },
-    include: { job: { include: { employer: true } }, jobSeeker: true, learner: true },
-  })
-
   let recipientUserId: string | null = null
   if (session.user.role === "EMPLOYER") {
-    recipientUserId = application?.jobSeeker?.userId || application?.learner?.userId || null
+    recipientUserId = application.jobSeeker?.userId || application.learner?.userId || null
   } else {
-    recipientUserId = application?.job.employer?.userId || null
+    recipientUserId = application.job.employer?.userId || null
   }
 
   if (recipientUserId) {

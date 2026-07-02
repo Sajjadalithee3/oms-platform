@@ -16,22 +16,30 @@ export async function GET(request: Request) {
 
   if (session.user.role === "JOB_SEEKER") {
     const profile = await prisma.jobSeekerProfile.findUnique({ where: { userId: session.user.id } })
-    if (profile) where.jobSeekerId = profile.id
+    if (!profile) return NextResponse.json([])
+    where.jobSeekerId = profile.id
   } else if (session.user.role === "LEARNER") {
     const profile = await prisma.learnerProfile.findUnique({ where: { userId: session.user.id } })
-    if (profile) where.learnerId = profile.id
+    if (!profile) return NextResponse.json([])
+    where.learnerId = profile.id
   } else if (session.user.role === "EMPLOYER") {
     const employer = await prisma.employerProfile.findUnique({ where: { userId: session.user.id } })
-    if (employer) {
-      const employerJobs = await prisma.job.findMany({ where: { employerId: employer.id }, select: { id: true } })
-      where.jobId = { in: employerJobs.map((j) => j.id) }
-    }
+    if (!employer) return NextResponse.json([])
+    const employerJobs = await prisma.job.findMany({ where: { employerId: employer.id }, select: { id: true } })
+    where.jobId = { in: employerJobs.map((j) => j.id) }
+  } else if (session.user.role === "TRAINING_PROVIDER") {
+    const provider = await prisma.providerProfile.findUnique({ where: { userId: session.user.id } })
+    if (!provider) return NextResponse.json([])
+    const learners = await prisma.learnerProfile.findMany({ where: { providerId: provider.id }, select: { id: true } })
+    where.learnerId = { in: learners.map((l) => l.id) }
+  } else if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "INTERNAL_STAFF") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const applications = await prisma.application.findMany({
     where,
     include: {
-      job: { select: { title: true, company: true, location: true, sector: true } },
+      job: { select: { title: true, company: true, location: true, sector: true, employer: { select: { companyName: true } } } },
       jobSeeker: { include: { user: { select: { name: true, email: true } } } },
       learner: { include: { user: { select: { name: true, email: true } } } },
       _count: { select: { messages: true, interviews: true } },

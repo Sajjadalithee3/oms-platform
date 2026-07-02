@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation"
 import { TopBar } from "@/components/dashboard/TopBar"
 import { MatchBadge } from "@/components/shared/MatchBadge"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
-import { MapPin, Briefcase, ExternalLink } from "lucide-react"
+import { MapPin, Briefcase, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
 
 interface Job {
   id: string; title: string; company: string; location: string; sector: string
@@ -17,6 +18,8 @@ interface Job {
 
 interface Match { jobId: string; matchScore: number; matchedSkills: string; missingSkills: string }
 
+const PAGE_SIZE = 12
+
 export default function LearnerJobsPage() {
   const router = useRouter()
   const [jobs, setJobs] = useState<Job[]>([])
@@ -24,14 +27,14 @@ export default function LearnerJobsPage() {
   const [search, setSearch] = useState("")
   const [locationFilter, setLocationFilter] = useState("")
   const [sortBy, setSortBy] = useState("match")
+  const [page, setPage] = useState(0)
 
   useEffect(() => {
     fetch("/api/jobs").then((r) => r.json()).then(setJobs)
     fetch("/api/candidates/profile").then(async (r) => {
       if (r.ok) {
         const profile = await r.json()
-        const profileId = profile.id
-        const matchRes = await fetch(`/api/matching/run-candidate/${profileId}`, { method: "POST" })
+        const matchRes = await fetch(`/api/matching/run-candidate/${profile.id}`, { method: "POST" })
         if (matchRes.ok) {
           const data = await matchRes.json()
           const map: Record<string, Match> = {}
@@ -42,12 +45,17 @@ export default function LearnerJobsPage() {
     })
   }, [])
 
+  useEffect(() => { setPage(0) }, [search, locationFilter, sortBy])
+
   let filtered = jobs.filter((j) => j.status === "ACTIVE")
   if (search) filtered = filtered.filter((j) => j.title.toLowerCase().includes(search.toLowerCase()) || j.company.toLowerCase().includes(search.toLowerCase()))
   if (locationFilter) filtered = filtered.filter((j) => j.location.toLowerCase().includes(locationFilter.toLowerCase()))
 
   if (sortBy === "match") filtered.sort((a, b) => (matches[b.id]?.matchScore || 0) - (matches[a.id]?.matchScore || 0))
   else filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
     <>
@@ -61,9 +69,9 @@ export default function LearnerJobsPage() {
             <option value="date">Sort by Date</option>
           </Select>
         </div>
-        <p className="text-sm text-gray-500">Showing jobs matching your course sector</p>
+        <p className="text-sm text-gray-500">{filtered.length} job{filtered.length !== 1 ? "s" : ""} matching your course sector</p>
         <div className="grid gap-4">
-          {filtered.map((job) => {
+          {paged.map((job) => {
             const match = matches[job.id]
             const matchedSkills: string[] = match ? JSON.parse(match.matchedSkills) : []
             const missingSkills: string[] = match ? JSON.parse(match.missingSkills) : []
@@ -91,6 +99,31 @@ export default function LearnerJobsPage() {
           })}
           {filtered.length === 0 && <p className="text-center text-gray-400 py-8">No matching jobs found</p>}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 border-t">
+            <p className="text-sm text-gray-500">
+              {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const start = Math.max(0, Math.min(page - 2, totalPages - 5))
+                const pageNum = start + i
+                return (
+                  <Button key={pageNum} variant={pageNum === page ? "default" : "outline"} size="sm" onClick={() => setPage(pageNum)} className="min-w-[36px]">
+                    {pageNum + 1}
+                  </Button>
+                )
+              })}
+              <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { recalculateProfileCompletion } from "@/lib/profile-completion"
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -33,7 +34,8 @@ export async function POST(request: Request) {
     },
   })
 
-  return NextResponse.json(certificate, { status: 201 })
+  const completion = await recalculateProfileCompletion(session.user.id, session.user.role)
+  return NextResponse.json({ ...certificate, profileComplete: completion?.percentage }, { status: 201 })
 }
 
 export async function DELETE(request: Request) {
@@ -47,5 +49,6 @@ export async function DELETE(request: Request) {
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
   await prisma.certificate.delete({ where: { id } })
-  return NextResponse.json({ success: true })
+  const completion = await recalculateProfileCompletion(session.user.id, session.user.role)
+  return NextResponse.json({ success: true, profileComplete: completion?.percentage })
 }

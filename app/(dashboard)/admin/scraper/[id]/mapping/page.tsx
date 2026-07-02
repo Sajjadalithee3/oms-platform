@@ -10,8 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Save, Eye, RefreshCw } from "lucide-react"
 
 const PLATFORM_FIELDS = [
-  "", "title", "company", "location", "sector", "salaryMin", "salaryMax",
-  "description", "sourceUrl", "deadline", "jobType"
+  "", "title", "company", "location", "region", "country", "state", "city",
+  "sector", "category", "jobType", "contractType", "workingHours",
+  "salaryMin", "salaryMax", "salaryCurrency", "salaryPeriod",
+  "description", "requiredSkills", "experienceLevel", "qualifications",
+  "sourceUrl", "externalId", "deadline", "publishedAt", "expiresAt", "isRemote"
 ]
 
 interface Board {
