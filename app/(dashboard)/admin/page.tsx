@@ -30,16 +30,16 @@ export default async function AdminDashboard() {
       <TopBar title="Admin Overview" notificationCount={notifications} />
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Providers" value={providerCount} icon={<GraduationCap className="h-6 w-6" />} />
-          <StatCard title="Employers" value={employerCount} icon={<Building2 className="h-6 w-6" />} />
-          <StatCard title="Learners" value={learnerCount} icon={<Users className="h-6 w-6" />} />
-          <StatCard title="Job Seekers" value={seekerCount} icon={<Search className="h-6 w-6" />} />
+          <StatCard title="Providers" value={providerCount} icon={<GraduationCap className="h-6 w-6" />} href="/admin/providers" />
+          <StatCard title="Employers" value={employerCount} icon={<Building2 className="h-6 w-6" />} href="/admin/employers" />
+          <StatCard title="Learners" value={learnerCount} icon={<Users className="h-6 w-6" />} href="/admin/users" />
+          <StatCard title="Job Seekers" value={seekerCount} icon={<Search className="h-6 w-6" />} href="/admin/users" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total Jobs" value={jobCount} icon={<Briefcase className="h-6 w-6" />} />
-          <StatCard title="Active Jobs" value={activeJobCount} icon={<TrendingUp className="h-6 w-6" />} color="bg-green-100 text-green-600" />
-          <StatCard title="Applications" value={applicationCount} icon={<FileText className="h-6 w-6" />} />
-          <StatCard title="Matches" value={matchCount} icon={<Target className="h-6 w-6" />} />
+          <StatCard title="Total Jobs" value={jobCount} icon={<Briefcase className="h-6 w-6" />} href="/admin/jobs" />
+          <StatCard title="Active Jobs" value={activeJobCount} icon={<TrendingUp className="h-6 w-6" />} color="bg-green-100 text-green-600" href="/admin/jobs" />
+          <StatCard title="Applications" value={applicationCount} icon={<FileText className="h-6 w-6" />} href="/admin/analytics" />
+          <StatCard title="Matches" value={matchCount} icon={<Target className="h-6 w-6" />} href="/admin/analytics" />
         </div>
 
         <div className="bg-white rounded-lg border p-6">
