@@ -28,9 +28,9 @@ export default async function LearnerDashboard() {
       <TopBar title="Learner Overview" notificationCount={notifications} />
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Profile Complete" value={`${learner.profileComplete}%`} icon={<User className="h-6 w-6" />} />
-          <StatCard title="Matched Jobs" value={matchCount} icon={<Briefcase className="h-6 w-6" />} />
-          <StatCard title="Applications" value={applicationCount} icon={<FileText className="h-6 w-6" />} />
+          <StatCard title="Profile Complete" value={`${learner.profileComplete}%`} icon={<User className="h-6 w-6" />} href="/learner/profile" />
+          <StatCard title="Matched Jobs" value={matchCount} icon={<Briefcase className="h-6 w-6" />} href="/learner/jobs" />
+          <StatCard title="Applications" value={applicationCount} icon={<FileText className="h-6 w-6" />} href="/learner/applications" />
           <StatCard title="Milestones" value={`${milestonesAchieved}/3`} icon={<Award className="h-6 w-6" />} />
         </div>
 

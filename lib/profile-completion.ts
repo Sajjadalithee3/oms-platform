@@ -127,3 +127,39 @@ function hasItems(jsonStr?: string | null): boolean {
     return false
   }
 }
+
+export { recalculateProfileCompletion }
+
+async function recalculateProfileCompletion(userId: string, role: string) {
+  const { prisma } = await import("@/lib/prisma")
+
+  if (role === "JOB_SEEKER") {
+    const profile = await prisma.jobSeekerProfile.findUnique({
+      where: { userId },
+      include: { experiences: true, educations: true, certificates: true },
+    })
+    if (!profile) return null
+    const completion = calculateJobSeekerCompletion(profile)
+    await prisma.jobSeekerProfile.update({
+      where: { userId },
+      data: { profileComplete: completion.percentage },
+    })
+    return completion
+  }
+
+  if (role === "LEARNER") {
+    const profile = await prisma.learnerProfile.findUnique({
+      where: { userId },
+      include: { experiences: true, educations: true, certificates: true },
+    })
+    if (!profile) return null
+    const completion = calculateLearnerCompletion(profile)
+    await prisma.learnerProfile.update({
+      where: { userId },
+      data: { profileComplete: completion.percentage },
+    })
+    return completion
+  }
+
+  return null
+}

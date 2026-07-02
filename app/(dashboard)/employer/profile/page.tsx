@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 import { TopBar } from "@/components/dashboard/TopBar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,16 +9,40 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Save, Building2 } from "lucide-react"
+import { Save, Building2, Upload, X } from "lucide-react"
 
 export default function EmployerProfilePage() {
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState("")
   const [isVerified, setIsVerified] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [profile, setProfile] = useState({
     companyName: "", companyLogo: "", industry: "", companySize: "",
     location: "", website: "", description: "", linkedIn: "", twitter: "",
   })
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setMessage("")
+    const formData = new FormData()
+    formData.append("logo", file)
+    try {
+      const res = await fetch("/api/upload/logo", { method: "POST", body: formData })
+      const data = await res.json()
+      if (res.ok) {
+        setProfile((p) => ({ ...p, companyLogo: data.url }))
+      } else {
+        setMessage(data.error || "Failed to upload logo")
+      }
+    } catch {
+      setMessage("Failed to upload logo")
+    }
+    setUploading(false)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
 
   useEffect(() => {
     fetch("/api/employers/profile").then((r) => r.json()).then((data) => {
@@ -59,9 +84,37 @@ export default function EmployerProfilePage() {
         {message && <div className={`p-3 rounded-md text-sm ${message.includes("success") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>{message}</div>}
 
         <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+          <div>
+            <Label>Company Logo</Label>
+            <div className="mt-2 flex items-center gap-4">
+              {profile.companyLogo ? (
+                <div className="relative h-20 w-20 rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
+                  <Image src={profile.companyLogo} alt="Company logo" fill className="object-contain p-1" unoptimized />
+                  <button
+                    type="button"
+                    onClick={() => setProfile({ ...profile, companyLogo: "" })}
+                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="h-20 w-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                  <Building2 className="h-8 w-8 text-gray-400" />
+                </div>
+              )}
+              <div>
+                <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogoUpload} className="hidden" />
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                  <Upload className="h-4 w-4 mr-2" />{uploading ? "Uploading..." : "Upload Logo"}
+                </Button>
+                <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP or SVG. Max 2MB.</p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><Label>Company Name</Label><Input value={profile.companyName} onChange={(e) => setProfile({ ...profile, companyName: e.target.value })} /></div>
-            <div><Label>Logo URL</Label><Input value={profile.companyLogo} onChange={(e) => setProfile({ ...profile, companyLogo: e.target.value })} placeholder="https://..." /></div>
             <div>
               <Label>Industry</Label>
               <Select value={profile.industry} onChange={(e) => setProfile({ ...profile, industry: e.target.value })}>

@@ -22,6 +22,10 @@ interface DataTableProps<T> {
   exportFilename?: string
   pageSize?: number
   onRowClick?: (row: T) => void
+  selectable?: boolean
+  selectedIds?: Set<string>
+  onSelectionChange?: (ids: Set<string>) => void
+  idKey?: string
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,6 +38,10 @@ export function DataTable<T extends Record<string, any>>({
   exportFilename = "export",
   pageSize: defaultPageSize = 10,
   onRowClick,
+  selectable = false,
+  selectedIds,
+  onSelectionChange,
+  idKey = "id",
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("")
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -121,10 +129,65 @@ export function DataTable<T extends Record<string, any>>({
         )}
       </div>
 
+      {selectable && selectedIds && selectedIds.size > 0 && (
+        <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-md px-4 py-2">
+          <span className="text-sm text-primary font-medium">{selectedIds.size} item{selectedIds.size !== 1 ? "s" : ""} selected</span>
+          <div className="flex gap-2">
+            {selectedIds.size < sorted.length && (
+              <button
+                type="button"
+                className="text-sm text-primary hover:underline"
+                onClick={() => {
+                  if (!onSelectionChange) return
+                  const all = new Set<string>()
+                  sorted.forEach((row) => all.add(row[idKey] as string))
+                  onSelectionChange(all)
+                }}
+              >
+                Select all {sorted.length}
+              </button>
+            )}
+            <button
+              type="button"
+              className="text-sm text-gray-500 hover:underline"
+              onClick={() => onSelectionChange?.(new Set())}
+            >
+              Clear selection
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-md border border-gray-200 overflow-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-gray-50">
+              {selectable && (
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300"
+                    checked={paged.length > 0 && paged.every((row) => selectedIds?.has(row[idKey] as string))}
+                    ref={(el) => {
+                      if (el) {
+                        const allSelected = paged.length > 0 && paged.every((row) => selectedIds?.has(row[idKey] as string))
+                        const someSelected = paged.some((row) => selectedIds?.has(row[idKey] as string))
+                        el.indeterminate = someSelected && !allSelected
+                      }
+                    }}
+                    onChange={(e) => {
+                      if (!onSelectionChange) return
+                      const next = new Set(selectedIds)
+                      if (e.target.checked) {
+                        paged.forEach((row) => next.add(row[idKey] as string))
+                      } else {
+                        paged.forEach((row) => next.delete(row[idKey] as string))
+                      }
+                      onSelectionChange(next)
+                    }}
+                  />
+                </th>
+              )}
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -150,7 +213,7 @@ export function DataTable<T extends Record<string, any>>({
             {paged.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length}
+                  colSpan={columns.length + (selectable ? 1 : 0)}
                   className="px-4 py-8 text-center text-gray-400"
                 >
                   No data found
@@ -161,10 +224,26 @@ export function DataTable<T extends Record<string, any>>({
                 <tr
                   key={i}
                   className={`border-b last:border-0 ${
-                    onRowClick ? "cursor-pointer hover:bg-gray-50" : ""
-                  }`}
+                    selectable && selectedIds?.has(row[idKey] as string) ? "bg-primary/5" : ""
+                  } ${onRowClick ? "cursor-pointer hover:bg-gray-50" : ""}`}
                   onClick={() => onRowClick?.(row)}
                 >
+                  {selectable && (
+                    <td className="px-4 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300"
+                        checked={selectedIds?.has(row[idKey] as string) || false}
+                        onChange={(e) => {
+                          if (!onSelectionChange) return
+                          const next = new Set(selectedIds)
+                          if (e.target.checked) next.add(row[idKey] as string)
+                          else next.delete(row[idKey] as string)
+                          onSelectionChange(next)
+                        }}
+                      />
+                    </td>
+                  )}
                   {columns.map((col) => (
                     <td key={col.key} className="px-4 py-3">
                       {col.render ? col.render(row) : (row[col.key] as React.ReactNode) ?? "—"}

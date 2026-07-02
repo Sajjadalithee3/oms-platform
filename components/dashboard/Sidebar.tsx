@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, Users, Briefcase, Settings, BarChart3, FileText, MessageSquare,
   Building2, GraduationCap, UserCheck, ClipboardList, Search, Target,
-  BookOpen, FolderOpen, Shield, LogOut, Menu, X
+  BookOpen, FolderOpen, Shield, LogOut, Menu, X, Megaphone
 } from "lucide-react"
 
 interface NavItem {
@@ -21,12 +21,15 @@ const navByRole: Record<string, NavItem[]> = {
   SUPER_ADMIN: [
     { label: "Overview", href: "/admin", icon: <LayoutDashboard className="h-5 w-5" /> },
     { label: "Providers", href: "/admin/providers", icon: <GraduationCap className="h-5 w-5" /> },
+    { label: "Learners", href: "/admin/learners", icon: <Users className="h-5 w-5" /> },
     { label: "Employers", href: "/admin/employers", icon: <Building2 className="h-5 w-5" /> },
     { label: "Jobs", href: "/admin/jobs", icon: <Briefcase className="h-5 w-5" /> },
     { label: "Users", href: "/admin/users", icon: <Users className="h-5 w-5" /> },
     { label: "Scraper", href: "/admin/scraper", icon: <Search className="h-5 w-5" /> },
     { label: "Matching", href: "/admin/matching", icon: <Target className="h-5 w-5" /> },
     { label: "Messages", href: "/admin/messages", icon: <MessageSquare className="h-5 w-5" /> },
+    { label: "Interviews", href: "/admin/interviews", icon: <UserCheck className="h-5 w-5" /> },
+    { label: "Ads", href: "/admin/ads", icon: <Megaphone className="h-5 w-5" /> },
     { label: "Audit Log", href: "/admin/audit", icon: <Shield className="h-5 w-5" /> },
     { label: "Analytics", href: "/admin/analytics", icon: <BarChart3 className="h-5 w-5" /> },
     { label: "Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
@@ -42,8 +45,10 @@ const navByRole: Record<string, NavItem[]> = {
   TRAINING_PROVIDER: [
     { label: "Overview", href: "/provider", icon: <LayoutDashboard className="h-5 w-5" /> },
     { label: "Learners", href: "/provider/learners", icon: <Users className="h-5 w-5" /> },
+    { label: "Jobs", href: "/provider/jobs", icon: <Briefcase className="h-5 w-5" /> },
     { label: "Courses", href: "/provider/courses", icon: <BookOpen className="h-5 w-5" /> },
     { label: "Cohorts", href: "/provider/cohorts", icon: <FolderOpen className="h-5 w-5" /> },
+    { label: "Ads", href: "/provider/ads", icon: <Megaphone className="h-5 w-5" /> },
     { label: "Messages", href: "/provider/messages", icon: <MessageSquare className="h-5 w-5" /> },
     { label: "Analytics", href: "/provider/analytics", icon: <BarChart3 className="h-5 w-5" /> },
   ],

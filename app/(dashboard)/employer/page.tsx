@@ -28,10 +28,10 @@ export default async function EmployerDashboard() {
       <TopBar title="Employer Overview" notificationCount={notifications} />
       <div className="p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Active Jobs" value={activeJobs} icon={<Briefcase className="h-6 w-6" />} />
-          <StatCard title="Applications" value={totalApplications} icon={<FileText className="h-6 w-6" />} />
-          <StatCard title="Interviews" value={interviewCount} icon={<Calendar className="h-6 w-6" />} />
-          <StatCard title="Shortlisted" value={shortlistedCount} icon={<UserCheck className="h-6 w-6" />} />
+          <StatCard title="Active Jobs" value={activeJobs} icon={<Briefcase className="h-6 w-6" />} href="/employer/jobs" />
+          <StatCard title="Applications" value={totalApplications} icon={<FileText className="h-6 w-6" />} href="/employer/applications" />
+          <StatCard title="Interviews" value={interviewCount} icon={<Calendar className="h-6 w-6" />} href="/employer/interviews" />
+          <StatCard title="Shortlisted" value={shortlistedCount} icon={<UserCheck className="h-6 w-6" />} href="/employer/applications" />
         </div>
       </div>
     </>

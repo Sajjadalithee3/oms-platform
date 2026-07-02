@@ -27,11 +27,11 @@ export default async function StaffDashboard() {
       <TopBar title="Staff Overview" notificationCount={notifications} />
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard title="Job Seekers" value={seekerCount} icon={<Users className="h-6 w-6" />} />
-          <StatCard title="Learners" value={learnerCount} icon={<Users className="h-6 w-6" />} />
-          <StatCard title="Active Jobs" value={jobCount} icon={<Briefcase className="h-6 w-6" />} />
-          <StatCard title="Applications" value={applicationCount} icon={<FileText className="h-6 w-6" />} />
-          <StatCard title="Matches" value={matchCount} icon={<Target className="h-6 w-6" />} />
+          <StatCard title="Job Seekers" value={seekerCount} icon={<Users className="h-6 w-6" />} href="/staff/candidates" />
+          <StatCard title="Learners" value={learnerCount} icon={<Users className="h-6 w-6" />} href="/staff/candidates" />
+          <StatCard title="Active Jobs" value={jobCount} icon={<Briefcase className="h-6 w-6" />} href="/staff/jobs" />
+          <StatCard title="Applications" value={applicationCount} icon={<FileText className="h-6 w-6" />} href="/staff/pipeline" />
+          <StatCard title="Matches" value={matchCount} icon={<Target className="h-6 w-6" />} href="/staff/matching" />
         </div>
 
         <div className="bg-white rounded-lg border p-6">

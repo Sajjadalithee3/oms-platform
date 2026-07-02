@@ -171,34 +171,34 @@ export default function SignupPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                <Input id="name" placeholder="e.g. John Smith" value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Input id="email" type="email" placeholder="e.g. john@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <Input id="password" type="password" placeholder="Min. 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                <Input id="confirmPassword" type="password" placeholder="Re-enter your password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
               </div>
 
               {selectedRole === "EMPLOYER" && (
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="companyName">Company Name</Label>
-                    <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
+                    <Input id="companyName" placeholder="e.g. Acme Ltd" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="industry">Industry</Label>
-                    <Input id="industry" value={industry} onChange={(e) => setIndustry(e.target.value)} />
+                    <Input id="industry" placeholder="e.g. Technology, Healthcare, Construction" value={industry} onChange={(e) => setIndustry(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="companyLocation">Location</Label>
-                    <Input id="companyLocation" value={companyLocation} onChange={(e) => setCompanyLocation(e.target.value)} />
+                    <Input id="companyLocation" placeholder="e.g. London, Manchester, Remote" value={companyLocation} onChange={(e) => setCompanyLocation(e.target.value)} />
                   </div>
                 </>
               )}
@@ -207,15 +207,15 @@ export default function SignupPage() {
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="organisationName">Organisation Name</Label>
-                    <Input id="organisationName" value={organisationName} onChange={(e) => setOrganisationName(e.target.value)} required />
+                    <Input id="organisationName" placeholder="e.g. Skills Academy UK" value={organisationName} onChange={(e) => setOrganisationName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="contactName">Contact Name</Label>
-                    <Input id="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+                    <Input id="contactName" placeholder="e.g. Jane Doe" value={contactName} onChange={(e) => setContactName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="contactPhone">Phone</Label>
-                    <Input id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
+                    <Input id="contactPhone" placeholder="e.g. 07700 900000" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
                   </div>
                 </>
               )}
