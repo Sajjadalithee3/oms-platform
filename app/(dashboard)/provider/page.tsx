@@ -31,10 +31,10 @@ export default async function ProviderDashboard() {
       <TopBar title="Provider Overview" notificationCount={notifications} />
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total Learners" value={totalLearners} icon={<Users className="h-6 w-6" />} />
-          <StatCard title="Active Learners" value={activeLearners} icon={<UserCheck className="h-6 w-6" />} />
-          <StatCard title="MS2 Achieved" value={ms2Count} icon={<Award className="h-6 w-6" />} />
-          <StatCard title="MS3 Achieved" value={ms3Count} icon={<Award className="h-6 w-6" />} />
+          <StatCard title="Total Learners" value={totalLearners} icon={<Users className="h-6 w-6" />} href="/provider/learners" />
+          <StatCard title="Active Learners" value={activeLearners} icon={<UserCheck className="h-6 w-6" />} href="/provider/learners" />
+          <StatCard title="MS2 Achieved" value={ms2Count} icon={<Award className="h-6 w-6" />} href="/provider/learners" />
+          <StatCard title="MS3 Achieved" value={ms3Count} icon={<Award className="h-6 w-6" />} href="/provider/learners" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatCard title="Green" value={greenCount} icon={<Users className="h-6 w-6" />} color="bg-green-100 text-green-600" />

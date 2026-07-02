@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getProviderQuotaStatus } from "@/lib/quota"
+import { sendEmail } from "@/lib/email"
+import { credentialsEmailTemplate } from "@/lib/email-templates"
 import bcrypt from "bcryptjs"
 
 export async function GET() {
@@ -15,7 +18,7 @@ export async function GET() {
 
   const learners = await prisma.learnerProfile.findMany({
     where: { providerId: provider.id },
-    include: { user: { select: { name: true, email: true } }, cohort: true },
+    include: { user: { select: { name: true, email: true, lastLoginAt: true } }, cohort: true },
     orderBy: { createdAt: "desc" },
   })
 
@@ -38,11 +41,16 @@ export async function POST(request: Request) {
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) return NextResponse.json({ error: "Email already registered" }, { status: 409 })
 
+  const quotaStatus = await getProviderQuotaStatus(provider.id)
+  if (quotaStatus.remaining <= 0) {
+    return NextResponse.json({ error: "Monthly learner upload quota reached" }, { status: 403 })
+  }
+
   const password = generatePassword()
   const hashedPassword = await bcrypt.hash(password, 10)
 
   const user = await prisma.user.create({
-    data: { email, password: hashedPassword, name, role: "LEARNER" },
+    data: { email, password: hashedPassword, name, role: "LEARNER", mustChangePassword: true },
   })
 
   const learner = await prisma.learnerProfile.create({
@@ -60,6 +68,9 @@ export async function POST(request: Request) {
   await prisma.auditLog.create({
     data: { userId: session.user.id, action: "CREATE", entity: "LearnerProfile", entityId: learner.id, detail: `Learner "${name}" created by provider` },
   })
+
+  const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`
+  await sendEmail({ to: email, ...credentialsEmailTemplate({ name, email, password, loginUrl }) })
 
   return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name }, learner, generatedPassword: password }, { status: 201 })
 }
