@@ -16,6 +16,8 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   isActive      Boolean   @default(true)
+  lastLoginAt        DateTime?
+  mustChangePassword Boolean   @default(false)
 
   employerProfile   EmployerProfile?
   jobSeekerProfile  JobSeekerProfile?
@@ -147,11 +149,13 @@ model ProviderProfile {
   isActive        Boolean   @default(true)
   billingStatus   String    @default("ACTIVE")
   monthlyFee      Float     @default(0)
+  learnerQuotaOverride Int?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   learners        LearnerProfile[]
   courses         Course[]
   cohorts         Cohort[]
+  ads             Advertisement[]
 }
 
 model Course {
@@ -235,14 +239,26 @@ model Job {
   title             String
   company           String
   location          String
+  region            String?
+  country           String?
+  state             String?
+  city              String?
   sector            String
+  category          String?
   jobType           String?
   salaryMin         Int?
   salaryMax         Int?
+  salaryCurrency    String?
+  salaryPeriod      String?
   description       String
   requiredSkills    String    @default("[]")
   experienceLevel   String?
+  qualifications    String?
+  contractType      String?
+  workingHours      String?
   deadline          DateTime?
+  publishedAt       DateTime?
+  expiresAt         DateTime?
   sourceType        String    @default("INTERNAL")
   sourceUrl         String?
   sourceBoardId     String?
@@ -322,11 +338,16 @@ model JobBoard {
   feedUrl           String?
   genericUrl        String?
   schedule          String    @default("DAILY")
+  scheduleTime      String    @default("06:00")
   isActive          Boolean   @default(true)
   lastFetchedAt     DateTime?
   lastJobCount      Int       @default(0)
   lastError         String?
   fieldMappings     String    @default("{}")
+  filterLocation    String?
+  filterCategory    String?
+  maxJobs           Int       @default(100)
+  filterDummy       Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
@@ -348,6 +369,21 @@ model Notification {
   isRead            Boolean   @default(false)
   link              String?
   createdAt         DateTime  @default(now())
+}
+
+model Advertisement {
+  id            String    @id @default(cuid())
+  type          String
+  imageUrl      String?
+  text          String?
+  externalLink  String?
+  startDate     DateTime
+  endDate       DateTime
+  isActive      Boolean   @default(true)
+  createdByRole String
+  providerId    String?
+  provider      ProviderProfile? @relation(fields: [providerId], references: [id])
+  createdAt     DateTime  @default(now())
 }
 
 model AuditLog {

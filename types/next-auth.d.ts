@@ -8,11 +8,13 @@ declare module "next-auth" {
       role: Role
       email: string
       name: string
+      mustChangePassword: boolean
     } & DefaultSession["user"]
   }
 
   interface User {
     role: Role
+    mustChangePassword: boolean
   }
 }
 
@@ -20,5 +22,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string
     role: Role
+    mustChangePassword: boolean
   }
 }

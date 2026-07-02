@@ -50,8 +50,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
+  const isAdmin = token.role === "SUPER_ADMIN" || token.role === "INTERNAL_STAFF"
+  const isImpersonating = request.cookies.get("impersonate_user_id")?.value
+
   for (const [routePrefix, allowedRoles] of Object.entries(roleRouteMap)) {
     if (pathname.startsWith(routePrefix)) {
+      if (isAdmin && isImpersonating) break
       if (!allowedRoles.includes(token.role as string)) {
         const dashboard = roleDashboardMap[token.role as string] || "/login"
         return NextResponse.redirect(new URL(dashboard, request.url))
