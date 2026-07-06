@@ -10,15 +10,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LogIn, AlertCircle, Eye, EyeOff } from "lucide-react"
 
-const roleRedirects: Record<string, string> = {
-  SUPER_ADMIN: "/admin",
-  INTERNAL_STAFF: "/staff",
-  TRAINING_PROVIDER: "/provider",
-  EMPLOYER: "/employer",
-  LEARNER: "/learner",
-  JOB_SEEKER: "/jobseeker",
-}
-
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
@@ -44,11 +35,9 @@ export default function LoginPage() {
       return
     }
 
-    const res = await fetch("/api/auth/session")
-    const session = await res.json()
-    const role = session?.user?.role
-    const redirectUrl = roleRedirects[role] || "/login"
-    router.push(redirectUrl)
+    // Middleware reads JWT and redirects to correct role dashboard
+    router.push("/")
+    router.refresh()
   }
 
   return (
