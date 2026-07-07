@@ -3,8 +3,10 @@ import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { Role } from "@prisma/client"
+import { authConfig } from "@/auth.config"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -41,30 +43,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user && user.id) {
-        token.id = user.id
-        token.role = (user as { role: Role }).role
-        token.mustChangePassword = (user as { mustChangePassword: boolean }).mustChangePassword
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string
-        session.user.role = token.role as Role
-        session.user.mustChangePassword = token.mustChangePassword as boolean
-      }
-      return session
-    },
-  },
-  pages: {
-    signIn: "/login",
-  },
 })
 
 export function getRoleRedirect(role: Role): string {
