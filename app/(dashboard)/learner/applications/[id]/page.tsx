@@ -21,6 +21,7 @@ export default function LearnerApplicationDetailPage() {
   const { data: session } = useSession()
   const [app, setApp] = useState<AppDetail | null>(null)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadApp() }, [params.id])
   function loadApp() { fetch(`/api/applications/${params.id}`).then((r) => r.json()).then(setApp) }
 
