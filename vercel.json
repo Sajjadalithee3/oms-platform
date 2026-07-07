@@ -1,0 +1,4 @@
+{
+  "buildCommand": "npx prisma generate && npx prisma db push && if [ \"$SEED_ON_DEPLOY\" = \"true\" ]; then npx prisma db seed; fi && next build",
+  "installCommand": "npm install"
+}
