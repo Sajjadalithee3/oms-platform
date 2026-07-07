@@ -35,9 +35,8 @@ export default function LoginPage() {
       return
     }
 
-    // Middleware reads JWT and redirects to correct role dashboard
-    router.push("/")
-    router.refresh()
+    // Full page reload so browser sends auth cookie and middleware redirects
+    window.location.href = "/"
   }
 
   return (
