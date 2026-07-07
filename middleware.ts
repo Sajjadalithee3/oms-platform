@@ -26,10 +26,6 @@ export default auth((req) => {
   const { pathname } = req.nextUrl
   const session = req.auth
 
-  console.log(
-    `[mw-debug] path=${pathname} hasSession=${!!session?.user} secretLen=${(process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "").length} hasCookie=${!!req.cookies.get("__Secure-authjs.session-token") || !!req.cookies.get("authjs.session-token")}`
-  )
-
   if (
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
