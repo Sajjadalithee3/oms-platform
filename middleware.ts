@@ -1,6 +1,5 @@
+import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import { getToken } from "next-auth/jwt"
 
 const roleRouteMap: Record<string, string[]> = {
   "/admin": ["SUPER_ADMIN"],
@@ -20,52 +19,55 @@ const roleDashboardMap: Record<string, string> = {
   JOB_SEEKER: "/jobseeker",
 }
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+export default auth((req) => {
+  const { pathname } = req.nextUrl
+  const session = req.auth
 
   if (
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/signup") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon")
   ) {
-    if (token && (pathname.startsWith("/login") || pathname.startsWith("/signup"))) {
-      const dashboard = roleDashboardMap[token.role as string] || "/login"
-      return NextResponse.redirect(new URL(dashboard, request.url))
+    return NextResponse.next()
+  }
+
+  if (pathname.startsWith("/login") || pathname.startsWith("/signup")) {
+    if (session?.user) {
+      const dashboard = roleDashboardMap[session.user.role as string] || "/login"
+      return NextResponse.redirect(new URL(dashboard, req.url))
     }
     return NextResponse.next()
   }
 
   if (pathname === "/") {
-    if (token) {
-      const dashboard = roleDashboardMap[token.role as string] || "/login"
-      return NextResponse.redirect(new URL(dashboard, request.url))
+    if (session?.user) {
+      const dashboard = roleDashboardMap[session.user.role as string] || "/login"
+      return NextResponse.redirect(new URL(dashboard, req.url))
     }
-    return NextResponse.redirect(new URL("/login", request.url))
+    return NextResponse.redirect(new URL("/login", req.url))
   }
 
-  if (!token) {
-    return NextResponse.redirect(new URL("/login", request.url))
+  if (!session?.user) {
+    return NextResponse.redirect(new URL("/login", req.url))
   }
 
-  const isAdmin = token.role === "SUPER_ADMIN" || token.role === "INTERNAL_STAFF"
-  const isImpersonating = request.cookies.get("impersonate_user_id")?.value
+  const role = session.user.role as string
+  const isAdmin = role === "SUPER_ADMIN" || role === "INTERNAL_STAFF"
+  const isImpersonating = req.cookies.get("impersonate_user_id")?.value
 
   for (const [routePrefix, allowedRoles] of Object.entries(roleRouteMap)) {
     if (pathname.startsWith(routePrefix)) {
       if (isAdmin && isImpersonating) break
-      if (!allowedRoles.includes(token.role as string)) {
-        const dashboard = roleDashboardMap[token.role as string] || "/login"
-        return NextResponse.redirect(new URL(dashboard, request.url))
+      if (!allowedRoles.includes(role)) {
+        const dashboard = roleDashboardMap[role] || "/login"
+        return NextResponse.redirect(new URL(dashboard, req.url))
       }
       break
     }
   }
 
   return NextResponse.next()
-}
+})
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
