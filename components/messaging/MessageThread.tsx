@@ -26,12 +26,11 @@ export function MessageThread({ applicationId, currentUserId, readOnly }: Messag
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadMessages()
     const interval = setInterval(loadMessages, 10000)
     return () => clearInterval(interval)
-  }, [applicationId])
+  }, [applicationId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
