@@ -22,7 +22,18 @@ export async function GET(request: Request) {
 
   if (session.user.role === "LEARNER") {
     const learner = await prisma.learnerProfile.findUnique({ where: { userId: session.user.id } })
-    if (learner?.courseSector) where.sector = learner.courseSector
+    if (learner) {
+      let desiredSectorList: string[] = []
+      try { desiredSectorList = JSON.parse(learner.desiredSectors || "[]") } catch { desiredSectorList = [] }
+      if (desiredSectorList.length > 0) where.sector = { in: desiredSectorList }
+    }
+  } else if (session.user.role === "JOB_SEEKER") {
+    const jobSeeker = await prisma.jobSeekerProfile.findUnique({ where: { userId: session.user.id } })
+    if (jobSeeker) {
+      let desiredSectorList: string[] = []
+      try { desiredSectorList = JSON.parse(jobSeeker.desiredSectors || "[]") } catch { desiredSectorList = [] }
+      if (desiredSectorList.length > 0) where.sector = { in: desiredSectorList }
+    }
   } else if (session.user.role === "EMPLOYER") {
     const employer = await prisma.employerProfile.findUnique({ where: { userId: session.user.id } })
     if (employer) where.employerId = employer.id
