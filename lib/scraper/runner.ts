@@ -104,6 +104,7 @@ export async function runScraper(boardId: string) {
             company: fixMojibake(String(job.company || existing.company)),
             location: String(job.location || existing.location),
             description: fixMojibake(String(job.description || existing.description)),
+            sector,
             salaryMin: (job.salaryMin as number) || existing.salaryMin,
             salaryMax: (job.salaryMax as number) || existing.salaryMax,
             sourceUrl: String(job.sourceUrl || existing.sourceUrl),
