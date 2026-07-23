@@ -6,7 +6,7 @@ interface JobSeekerFields {
   skills?: string | null
   experiences?: unknown[]
   educations?: unknown[]
-  desiredRoles?: string | null
+  desiredSectors?: string | null
   desiredSalaryMin?: number | null
   desiredLocation?: string | null
   cvFile?: string | null
@@ -20,7 +20,7 @@ interface LearnerFields {
   skills?: string | null
   experiences?: unknown[]
   educations?: unknown[]
-  desiredRoles?: string | null
+  desiredSectors?: string | null
   desiredSalaryMin?: number | null
   desiredLocation?: string | null
   cvFile?: string | null
@@ -54,7 +54,7 @@ export function calculateJobSeekerCompletion(profile: JobSeekerFields): {
     {
       name: "Preferences",
       weight: 15,
-      filled: !!(hasItems(profile.desiredRoles) && profile.desiredLocation),
+      filled: !!(hasItems(profile.desiredSectors) && profile.desiredLocation),
     },
     {
       name: "CV Upload",
@@ -100,7 +100,7 @@ export function calculateLearnerCompletion(profile: LearnerFields): {
     {
       name: "Preferences",
       weight: 15,
-      filled: !!(hasItems(profile.desiredRoles) && profile.desiredLocation),
+      filled: !!(hasItems(profile.desiredSectors) && profile.desiredLocation),
     },
     {
       name: "CV Upload",

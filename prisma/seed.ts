@@ -105,6 +105,11 @@ async function main() {
     },
   })
 
+  const sectorNames = ["Health Care", "Digital Support", "Information Technology", "Technical", "AI", "Non Technical"]
+  await prisma.sector.createMany({
+    data: sectorNames.map((name) => ({ name })),
+  })
+
   const course = await prisma.course.create({
     data: {
       providerId: provider.id,
@@ -136,7 +141,7 @@ async function main() {
       phone: "07700 900001",
       location: "London",
       skills: JSON.stringify(["patient care", "communication", "teamwork"]),
-      desiredRoles: JSON.stringify(["Care Worker", "Healthcare Assistant"]),
+      desiredSectors: JSON.stringify(["Health Care"]),
       courseName: "Health & Social Care Level 3",
       courseSector: "Health & Social Care",
       courseStartDate: new Date("2026-01-15"),
@@ -166,7 +171,7 @@ async function main() {
       phone: "07700 900002",
       location: "Birmingham",
       skills: JSON.stringify(["communication", "teamwork", "problem solving"]),
-      desiredRoles: JSON.stringify(["Support Worker"]),
+      desiredSectors: JSON.stringify(["Health Care"]),
       courseName: "Health & Social Care Level 3",
       courseSector: "Health & Social Care",
       courseStartDate: new Date("2026-01-15"),
@@ -198,7 +203,7 @@ async function main() {
       phone: "07700 900003",
       location: "Leeds",
       skills: JSON.stringify(["patient care", "clinical", "healthcare", "care plan"]),
-      desiredRoles: JSON.stringify(["Healthcare Assistant", "Care Coordinator"]),
+      desiredSectors: JSON.stringify(["Health Care"]),
       courseName: "Health & Social Care Level 3",
       courseSector: "Health & Social Care",
       courseStartDate: new Date("2026-01-15"),
@@ -218,7 +223,7 @@ async function main() {
       phone: "07700 900004",
       location: "Manchester",
       skills: JSON.stringify(["javascript", "typescript", "react", "node", "sql", "git"]),
-      desiredRoles: JSON.stringify(["Full Stack Developer", "Frontend Developer"]),
+      desiredSectors: JSON.stringify(["Information Technology"]),
       desiredSalaryMin: 35000,
       desiredSalaryMax: 55000,
       desiredLocation: "Manchester",

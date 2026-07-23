@@ -43,14 +43,15 @@ export async function PUT(request: Request) {
   const body = await request.json()
 
   if (session.user.role === "JOB_SEEKER") {
-    const { headline, bio, phone, location, skills, desiredRoles, desiredSalaryMin, desiredSalaryMax, desiredLocation, remotePreference, linkedIn, github, portfolio, cvFile, cvText } = body
+    const { headline, bio, phone, location, skills, desiredSectors, employmentType, desiredSalaryMin, desiredSalaryMax, desiredLocation, remotePreference, linkedIn, github, portfolio, cvFile, cvText } = body
 
     const profile = await prisma.jobSeekerProfile.update({
       where: { userId: session.user.id },
       data: {
         headline, bio, phone, location,
         skills: skills ? JSON.stringify(skills) : undefined,
-        desiredRoles: desiredRoles ? JSON.stringify(desiredRoles) : undefined,
+        desiredSectors: desiredSectors ? JSON.stringify(desiredSectors) : undefined,
+        employmentType,
         desiredSalaryMin, desiredSalaryMax, desiredLocation, remotePreference,
         linkedIn, github, portfolio, cvFile, cvText,
       },
@@ -77,14 +78,15 @@ export async function PUT(request: Request) {
   }
 
   if (session.user.role === "LEARNER") {
-    const { headline, bio, phone, location, skills, desiredRoles, desiredSalaryMin, desiredSalaryMax, desiredLocation, remotePreference, linkedIn, github, portfolio, cvFile, cvText } = body
+    const { headline, bio, phone, location, skills, desiredSectors, employmentType, desiredSalaryMin, desiredSalaryMax, desiredLocation, remotePreference, linkedIn, github, portfolio, cvFile, cvText } = body
 
     const profile = await prisma.learnerProfile.update({
       where: { userId: session.user.id },
       data: {
         headline, bio, phone, location,
         skills: skills ? JSON.stringify(skills) : undefined,
-        desiredRoles: desiredRoles ? JSON.stringify(desiredRoles) : undefined,
+        desiredSectors: desiredSectors ? JSON.stringify(desiredSectors) : undefined,
+        employmentType,
         desiredSalaryMin, desiredSalaryMax, desiredLocation, remotePreference,
         linkedIn, github, portfolio, cvFile, cvText,
       },

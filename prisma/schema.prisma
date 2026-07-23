@@ -70,7 +70,8 @@ model JobSeekerProfile {
   cvFile            String?
   cvText            String?
   skills            String    @default("[]")
-  desiredRoles      String    @default("[]")
+  desiredSectors    String    @default("[]")
+  employmentType    String?
   desiredSalaryMin  Int?
   desiredSalaryMax  Int?
   desiredLocation   String?
@@ -104,7 +105,8 @@ model LearnerProfile {
   cvFile            String?
   cvText            String?
   skills            String    @default("[]")
-  desiredRoles      String    @default("[]")
+  desiredSectors    String    @default("[]")
+  employmentType    String?
   desiredSalaryMin  Int?
   desiredSalaryMax  Int?
   desiredLocation   String?
