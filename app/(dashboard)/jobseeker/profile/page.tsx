@@ -44,6 +44,17 @@ interface Certificate {
   fileUrl?: string
 }
 
+const SALARY_BANDS: { label: string; min: number | null; max: number | null }[] = [
+  { label: "Under £25,000", min: null, max: 25000 },
+  { label: "£25,000 – £35,000", min: 25000, max: 35000 },
+  { label: "£35,000 – £50,000", min: 35000, max: 50000 },
+]
+
+function bandFromSalary(min: number | null | undefined, max: number | null | undefined): string {
+  const found = SALARY_BANDS.find((b) => b.min === (min ?? null) && b.max === (max ?? null))
+  return found?.label || ""
+}
+
 export default function JobSeekerProfilePage() {
   useSession()
   const searchParams = useSearchParams()
@@ -55,34 +66,39 @@ export default function JobSeekerProfilePage() {
   const [profile, setProfile] = useState({
     headline: "", bio: "", phone: "", location: "", photo: "",
     linkedIn: "", github: "", portfolio: "",
-    desiredSalaryMin: "", desiredSalaryMax: "", desiredLocation: "", remotePreference: "",
+    salaryBand: "", employmentType: "", desiredLocation: "", remotePreference: "",
     cvFile: "", cvText: "",
   })
   const [skills, setSkills] = useState<string[]>([])
   const [skillInput, setSkillInput] = useState("")
-  const [desiredRoles, setDesiredRoles] = useState<string[]>([])
-  const [roleInput, setRoleInput] = useState("")
+  const [sectors, setSectors] = useState<{ id: string; name: string }[]>([])
+  const [desiredSectors, setDesiredSectors] = useState<string[]>([])
+  const [sectorLimitMsg, setSectorLimitMsg] = useState("")
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [educations, setEducations] = useState<Education[]>([])
   const [certificates, setCertificates] = useState<Certificate[]>([])
 
   const loadProfile = useCallback(async () => {
-    const res = await fetch("/api/candidates/profile")
-    if (res.ok) {
-      const data = await res.json()
+    const [profileRes, sectorsRes] = await Promise.all([
+      fetch("/api/candidates/profile"),
+      fetch("/api/sectors"),
+    ])
+    if (sectorsRes.ok) setSectors(await sectorsRes.json())
+    if (profileRes.ok) {
+      const data = await profileRes.json()
       setProfile({
         headline: data.headline || "", bio: data.bio || "",
         phone: data.phone || "", location: data.location || "",
         photo: data.photo || "", linkedIn: data.linkedIn || "",
         github: data.github || "", portfolio: data.portfolio || "",
-        desiredSalaryMin: data.desiredSalaryMin?.toString() || "",
-        desiredSalaryMax: data.desiredSalaryMax?.toString() || "",
+        salaryBand: bandFromSalary(data.desiredSalaryMin, data.desiredSalaryMax),
+        employmentType: data.employmentType || "",
         desiredLocation: data.desiredLocation || "",
         remotePreference: data.remotePreference || "",
         cvFile: data.cvFile || "", cvText: data.cvText || "",
       })
       try { setSkills(JSON.parse(data.skills || "[]")) } catch { setSkills([]) }
-      try { setDesiredRoles(JSON.parse(data.desiredRoles || "[]")) } catch { setDesiredRoles([]) }
+      try { setDesiredSectors(JSON.parse(data.desiredSectors || "[]")) } catch { setDesiredSectors([]) }
       setExperiences(data.experiences || [])
       setEducations(data.educations || [])
       setCertificates(data.certificates || [])
@@ -95,15 +111,17 @@ export default function JobSeekerProfilePage() {
   async function saveProfile() {
     setSaving(true)
     setMessage("")
+    const band = SALARY_BANDS.find((b) => b.label === profile.salaryBand)
     const res = await fetch("/api/candidates/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...profile,
         skills,
-        desiredRoles,
-        desiredSalaryMin: profile.desiredSalaryMin ? parseInt(profile.desiredSalaryMin) : null,
-        desiredSalaryMax: profile.desiredSalaryMax ? parseInt(profile.desiredSalaryMax) : null,
+        desiredSectors,
+        employmentType: profile.employmentType || null,
+        desiredSalaryMin: band ? band.min : null,
+        desiredSalaryMax: band ? band.max : null,
       }),
     })
     if (res.ok) {
@@ -222,12 +240,17 @@ export default function JobSeekerProfilePage() {
     }
   }
 
-  function addRole() {
-    const r = roleInput.trim()
-    if (r && !desiredRoles.includes(r)) {
-      setDesiredRoles([...desiredRoles, r])
-      setRoleInput("")
+  function toggleSector(name: string) {
+    setSectorLimitMsg("")
+    if (desiredSectors.includes(name)) {
+      setDesiredSectors(desiredSectors.filter((s) => s !== name))
+      return
     }
+    if (desiredSectors.length >= 5) {
+      setSectorLimitMsg("Maximum 5 sectors")
+      return
+    }
+    setDesiredSectors([...desiredSectors, name])
   }
 
   return (
@@ -400,28 +423,40 @@ export default function JobSeekerProfilePage() {
           <TabsContent value="preferences">
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
               <div>
-                <Label>Desired Roles</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input placeholder="Add a role..." value={roleInput} onChange={(e) => setRoleInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addRole())} />
-                  <Button onClick={addRole} variant="outline"><Plus className="h-4 w-4" /></Button>
-                </div>
+                <Label>Desired Sector (up to 5)</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {desiredRoles.map((r) => (
-                    <span key={r} className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
-                      {r}
-                      <button type="button" onClick={() => setDesiredRoles(desiredRoles.filter((x) => x !== r))}><X className="h-3 w-3" /></button>
-                    </span>
-                  ))}
+                  {sectors.map((s) => {
+                    const selected = desiredSectors.includes(s.name)
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => toggleSector(s.name)}
+                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${selected ? "bg-primary text-white border-primary" : "bg-white text-gray-700 border-gray-300 hover:border-primary"}`}
+                      >
+                        {s.name}
+                      </button>
+                    )
+                  })}
                 </div>
+                {sectorLimitMsg && <p className="text-xs text-red-600 mt-1">{sectorLimitMsg}</p>}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="salaryMin">Minimum Salary</Label>
-                  <Input id="salaryMin" type="number" placeholder="e.g. 25000" value={profile.desiredSalaryMin} onChange={(e) => setProfile({ ...profile, desiredSalaryMin: e.target.value })} />
+                  <Label htmlFor="salaryBand">Desired Salary</Label>
+                  <Select id="salaryBand" value={profile.salaryBand} onChange={(e) => setProfile({ ...profile, salaryBand: e.target.value })}>
+                    <option value="">Not specified</option>
+                    {SALARY_BANDS.map((b) => <option key={b.label} value={b.label}>{b.label}</option>)}
+                  </Select>
                 </div>
                 <div>
-                  <Label htmlFor="salaryMax">Maximum Salary</Label>
-                  <Input id="salaryMax" type="number" placeholder="e.g. 45000" value={profile.desiredSalaryMax} onChange={(e) => setProfile({ ...profile, desiredSalaryMax: e.target.value })} />
+                  <Label htmlFor="employmentType">Employment Type</Label>
+                  <Select id="employmentType" value={profile.employmentType} onChange={(e) => setProfile({ ...profile, employmentType: e.target.value })}>
+                    <option value="">Not specified</option>
+                    <option value="FULL_TIME">Full-time</option>
+                    <option value="PART_TIME">Part-time</option>
+                    <option value="BOTH">Both</option>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="desiredLocation">Preferred Location</Label>

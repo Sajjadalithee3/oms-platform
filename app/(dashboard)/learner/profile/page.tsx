@@ -18,6 +18,17 @@ interface Experience { id?: string; title: string; company: string; location?: s
 interface Education { id?: string; institution: string; degree?: string; field?: string; startDate?: string; endDate?: string; current: boolean }
 interface Certificate { id?: string; name: string; issuer?: string; issueDate?: string; fileUrl?: string }
 
+const SALARY_BANDS: { label: string; min: number | null; max: number | null }[] = [
+  { label: "Under £25,000", min: null, max: 25000 },
+  { label: "£25,000 – £35,000", min: 25000, max: 35000 },
+  { label: "£35,000 – £50,000", min: 35000, max: 50000 },
+]
+
+function bandFromSalary(min: number | null | undefined, max: number | null | undefined): string {
+  const found = SALARY_BANDS.find((b) => b.min === (min ?? null) && b.max === (max ?? null))
+  return found?.label || ""
+}
+
 export default function LearnerProfilePage() {
   const [activeTab, setActiveTab] = useState("personal")
   const [saving, setSaving] = useState(false)
@@ -28,28 +39,33 @@ export default function LearnerProfilePage() {
   const [profile, setProfile] = useState({
     headline: "", bio: "", phone: "", location: "", photo: "",
     linkedIn: "", github: "", portfolio: "",
-    desiredSalaryMin: "", desiredSalaryMax: "", desiredLocation: "", remotePreference: "",
+    salaryBand: "", employmentType: "", desiredLocation: "", remotePreference: "",
     cvFile: "", cvText: "",
   })
   const [skills, setSkills] = useState<string[]>([])
   const [skillInput, setSkillInput] = useState("")
-  const [desiredRoles, setDesiredRoles] = useState<string[]>([])
-  const [roleInput, setRoleInput] = useState("")
+  const [sectors, setSectors] = useState<{ id: string; name: string }[]>([])
+  const [desiredSectors, setDesiredSectors] = useState<string[]>([])
+  const [sectorLimitMsg, setSectorLimitMsg] = useState("")
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [educations, setEducations] = useState<Education[]>([])
   const [certificates, setCertificates] = useState<Certificate[]>([])
 
   const loadProfile = useCallback(async () => {
-    const res = await fetch("/api/candidates/profile")
-    if (res.ok) {
-      const data = await res.json()
+    const [profileRes, sectorsRes] = await Promise.all([
+      fetch("/api/candidates/profile"),
+      fetch("/api/sectors"),
+    ])
+    if (sectorsRes.ok) setSectors(await sectorsRes.json())
+    if (profileRes.ok) {
+      const data = await profileRes.json()
       setProfile({
         headline: data.headline || "", bio: data.bio || "",
         phone: data.phone || "", location: data.location || "",
         photo: data.photo || "", linkedIn: data.linkedIn || "",
         github: data.github || "", portfolio: data.portfolio || "",
-        desiredSalaryMin: data.desiredSalaryMin?.toString() || "",
-        desiredSalaryMax: data.desiredSalaryMax?.toString() || "",
+        salaryBand: bandFromSalary(data.desiredSalaryMin, data.desiredSalaryMax),
+        employmentType: data.employmentType || "",
         desiredLocation: data.desiredLocation || "",
         remotePreference: data.remotePreference || "",
         cvFile: data.cvFile || "", cvText: data.cvText || "",
@@ -61,7 +77,7 @@ export default function LearnerProfilePage() {
         providerName: data.provider?.organisationName || "",
       })
       try { setSkills(JSON.parse(data.skills || "[]")) } catch { setSkills([]) }
-      try { setDesiredRoles(JSON.parse(data.desiredRoles || "[]")) } catch { setDesiredRoles([]) }
+      try { setDesiredSectors(JSON.parse(data.desiredSectors || "[]")) } catch { setDesiredSectors([]) }
       setExperiences(data.experiences || [])
       setEducations(data.educations || [])
       setCertificates(data.certificates || [])
@@ -73,11 +89,14 @@ export default function LearnerProfilePage() {
 
   async function saveProfile() {
     setSaving(true); setMessage("")
+    const band = SALARY_BANDS.find((b) => b.label === profile.salaryBand)
     const res = await fetch("/api/candidates/profile", {
       method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...profile, skills, desiredRoles,
-        desiredSalaryMin: profile.desiredSalaryMin ? parseInt(profile.desiredSalaryMin) : null,
-        desiredSalaryMax: profile.desiredSalaryMax ? parseInt(profile.desiredSalaryMax) : null,
+      body: JSON.stringify({
+        ...profile, skills, desiredSectors,
+        employmentType: profile.employmentType || null,
+        desiredSalaryMin: band ? band.min : null,
+        desiredSalaryMax: band ? band.max : null,
       }),
     })
     if (res.ok) {
@@ -86,6 +105,19 @@ export default function LearnerProfilePage() {
       setMessage("Profile saved successfully")
     } else { setMessage("Failed to save profile") }
     setSaving(false); setTimeout(() => setMessage(""), 3000)
+  }
+
+  function toggleSector(name: string) {
+    setSectorLimitMsg("")
+    if (desiredSectors.includes(name)) {
+      setDesiredSectors(desiredSectors.filter((s) => s !== name))
+      return
+    }
+    if (desiredSectors.length >= 5) {
+      setSectorLimitMsg("Maximum 5 sectors")
+      return
+    }
+    setDesiredSectors([...desiredSectors, name])
   }
 
   async function addExperience(exp: Experience) {
@@ -299,14 +331,42 @@ export default function LearnerProfilePage() {
 
           <TabsContent value="preferences">
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
-              <div className="flex gap-2">
-                <Input placeholder="Add desired role..." value={roleInput} onChange={(e) => setRoleInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const r = roleInput.trim(); if (r && !desiredRoles.includes(r)) { setDesiredRoles([...desiredRoles, r]); setRoleInput("") } } }} />
-                <Button variant="outline" onClick={() => { const r = roleInput.trim(); if (r && !desiredRoles.includes(r)) { setDesiredRoles([...desiredRoles, r]); setRoleInput("") } }}><Plus className="h-4 w-4" /></Button>
+              <div>
+                <Label>Desired Sector (up to 5)</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {sectors.map((s) => {
+                    const selected = desiredSectors.includes(s.name)
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => toggleSector(s.name)}
+                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${selected ? "bg-primary text-white border-primary" : "bg-white text-gray-700 border-gray-300 hover:border-primary"}`}
+                      >
+                        {s.name}
+                      </button>
+                    )
+                  })}
+                </div>
+                {sectorLimitMsg && <p className="text-xs text-red-600 mt-1">{sectorLimitMsg}</p>}
               </div>
-              <div className="flex flex-wrap gap-2">{desiredRoles.map((r) => (<span key={r} className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">{r}<button type="button" onClick={() => setDesiredRoles(desiredRoles.filter((x) => x !== r))}><X className="h-3 w-3" /></button></span>))}</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><Label>Min Salary</Label><Input type="number" value={profile.desiredSalaryMin} onChange={(e) => setProfile({ ...profile, desiredSalaryMin: e.target.value })} /></div>
-                <div><Label>Max Salary</Label><Input type="number" value={profile.desiredSalaryMax} onChange={(e) => setProfile({ ...profile, desiredSalaryMax: e.target.value })} /></div>
+                <div>
+                  <Label>Desired Salary</Label>
+                  <Select value={profile.salaryBand} onChange={(e) => setProfile({ ...profile, salaryBand: e.target.value })}>
+                    <option value="">Not specified</option>
+                    {SALARY_BANDS.map((b) => <option key={b.label} value={b.label}>{b.label}</option>)}
+                  </Select>
+                </div>
+                <div>
+                  <Label>Employment Type</Label>
+                  <Select value={profile.employmentType} onChange={(e) => setProfile({ ...profile, employmentType: e.target.value })}>
+                    <option value="">Not specified</option>
+                    <option value="FULL_TIME">Full-time</option>
+                    <option value="PART_TIME">Part-time</option>
+                    <option value="BOTH">Both</option>
+                  </Select>
+                </div>
                 <div><Label>Preferred Location</Label><Input value={profile.desiredLocation} onChange={(e) => setProfile({ ...profile, desiredLocation: e.target.value })} /></div>
                 <div><Label>Remote</Label><Select value={profile.remotePreference} onChange={(e) => setProfile({ ...profile, remotePreference: e.target.value })}><option value="">Select...</option><option value="REMOTE">Remote</option><option value="HYBRID">Hybrid</option><option value="ON_SITE">On-site</option><option value="FLEXIBLE">Flexible</option></Select></div>
               </div>
