@@ -57,19 +57,21 @@ export async function runScraper(boardId: string) {
       return { success: false, error: "Generic boards require manual field mapping" }
     }
 
-    // Reed and Adzuna already use filterCategory as the search keyword sent to their API,
-    // so re-applying it as a post-fetch title/category substring check would reject
-    // results whose title doesn't literally contain the category phrase.
-    const categoryAlreadyAppliedUpstream = board.boardType === "REED" || board.boardType === "ADZUNA"
+    // Reed and Adzuna already send filterCategory (as search keywords) and filterLocation
+    // (as a real location/radius parameter) to their own API, so re-applying strict
+    // substring checks afterward would reject genuinely relevant results whose title
+    // doesn't literally contain the category phrase, or whose location is a nearby
+    // postcode/town rather than the literal filter string.
+    const filtersAlreadyAppliedUpstream = board.boardType === "REED" || board.boardType === "ADZUNA"
 
     let filtered = jobs
     if (board.filterDummy) {
       filtered = filtered.filter(job => !isDummyJob(job))
     }
-    if (board.filterLocation) {
+    if (board.filterLocation && !filtersAlreadyAppliedUpstream) {
       filtered = filtered.filter(job => matchesLocationFilter(job, board.filterLocation!))
     }
-    if (board.filterCategory && !categoryAlreadyAppliedUpstream) {
+    if (board.filterCategory && !filtersAlreadyAppliedUpstream) {
       filtered = filtered.filter(job => matchesCategoryFilter(job, board.filterCategory!))
     }
     if (board.maxJobs > 0) {

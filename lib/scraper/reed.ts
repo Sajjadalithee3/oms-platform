@@ -26,7 +26,7 @@ function normaliseReedJob(job: ReedJob) {
 }
 
 export async function fetchFromReed(apiKey: string, keywords: string, location: string = "uk") {
-  const url = `https://www.reed.co.uk/api/1.0/search?keywords=${encodeURIComponent(keywords)}&location=${location}&resultsToTake=100`
+  const url = `https://www.reed.co.uk/api/1.0/search?keywords=${encodeURIComponent(keywords)}&locationName=${encodeURIComponent(location)}&resultsToTake=100`
   const response = await fetch(url, {
     headers: { Authorization: `Basic ${Buffer.from(apiKey + ":").toString("base64")}` },
   })
