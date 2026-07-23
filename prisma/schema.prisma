@@ -253,6 +253,7 @@ model Job {
   salaryCurrency    String?
   salaryPeriod      String?
   description       String
+  descriptionFull   Boolean   @default(false)
   requiredSkills    String    @default("[]")
   experienceLevel   String?
   qualifications    String?

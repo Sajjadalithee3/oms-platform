@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { fetchReedJobDescription } from "@/lib/scraper/reed"
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const job = await prisma.job.findUnique({
+  let job = await prisma.job.findUnique({
     where: { id: params.id },
     include: {
       employer: { select: { companyName: true, companyLogo: true, industry: true, location: true, website: true, description: true } },
@@ -15,6 +16,26 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   })
 
   if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+  // Reed's search feed only stores a truncated description preview. Fetch the
+  // full text on first view and cache it, so this only costs one extra API
+  // call per job ever actually opened, not per scrape run.
+  if (job.sourceType === "REED" && !job.descriptionFull && job.externalId) {
+    const board = job.sourceBoardId ? await prisma.jobBoard.findUnique({ where: { id: job.sourceBoardId } }) : null
+    if (board?.apiKey) {
+      const fullDescription = await fetchReedJobDescription(board.apiKey, job.externalId)
+      if (fullDescription) {
+        job = await prisma.job.update({
+          where: { id: job.id },
+          data: { description: fullDescription, descriptionFull: true },
+          include: {
+            employer: { select: { companyName: true, companyLogo: true, industry: true, location: true, website: true, description: true } },
+            _count: { select: { applications: true } },
+          },
+        })
+      }
+    }
+  }
 
   let matchData = null
   let hasApplied = false

@@ -34,3 +34,15 @@ export async function fetchFromReed(apiKey: string, keywords: string, location: 
   const data = await response.json()
   return (data.results || []).map(normaliseReedJob)
 }
+
+// Reed's search endpoint only returns a truncated description preview.
+// The full text requires this separate per-job detail call.
+export async function fetchReedJobDescription(apiKey: string, jobId: string): Promise<string | null> {
+  const url = `https://www.reed.co.uk/api/1.0/jobs/${jobId}`
+  const response = await fetch(url, {
+    headers: { Authorization: `Basic ${Buffer.from(apiKey + ":").toString("base64")}` },
+  })
+  if (!response.ok) return null
+  const data = await response.json()
+  return data.jobDescription || null
+}
