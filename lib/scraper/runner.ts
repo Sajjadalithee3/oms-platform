@@ -20,14 +20,12 @@ export function fixMojibake(text: string): string {
 
 export function inferSector(title: string, description: string): string {
   const text = `${title} ${description}`.toLowerCase()
-  if (text.match(/nurse|care|health|medical|clinical|nhs/)) return "Health & Social Care"
-  if (text.match(/developer|engineer|software|tech|it |data|cyber/)) return "Technology"
-  if (text.match(/teach|education|tutor|school|college/)) return "Education"
-  if (text.match(/finance|accountan|audit|tax|banking/)) return "Finance"
-  if (text.match(/market|sales|digital|seo|content/)) return "Marketing & Sales"
-  if (text.match(/construc|site|build|plumb|electric/)) return "Construction"
-  if (text.match(/logistics|warehouse|driver|supply chain/)) return "Logistics"
-  return "General"
+  if (text.match(/\bai\b|artificial intelligence|machine learning|\bml\b|deep learning|data scientist|nlp|neural network/)) return "AI"
+  if (text.match(/nurse|care|health|medical|clinical|nhs/)) return "Health Care"
+  if (text.match(/developer|engineer|software|programmer|coding|it support|network|sysadmin|devops|cyber|database/)) return "Information Technology"
+  if (text.match(/market|digital|seo|content|social media|campaign/)) return "Digital Support"
+  if (text.match(/construc|site|build|plumb|electric|warehouse|driver|logistics|supply chain|technician|maintenance/)) return "Technical"
+  return "Non Technical"
 }
 
 export async function runScraper(boardId: string) {
