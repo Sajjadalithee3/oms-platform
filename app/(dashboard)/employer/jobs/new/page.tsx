@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { TopBar } from "@/components/dashboard/TopBar"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,9 @@ export default function PostJobPage() {
   const [skillInput, setSkillInput] = useState("")
   const [skills, setSkills] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [sectors, setSectors] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => { fetch("/api/sectors").then((r) => r.json()).then(setSectors) }, [])
 
   async function handleSubmit() {
     setSubmitting(true)
@@ -42,14 +45,7 @@ export default function PostJobPage() {
               <Label>Sector</Label>
               <Select value={form.sector} onChange={(e) => setForm({ ...form, sector: e.target.value })}>
                 <option value="">Select sector...</option>
-                <option value="Health & Social Care">Health & Social Care</option>
-                <option value="Technology">Technology</option>
-                <option value="Education">Education</option>
-                <option value="Finance">Finance</option>
-                <option value="Construction">Construction</option>
-                <option value="Marketing & Sales">Marketing & Sales</option>
-                <option value="Logistics">Logistics</option>
-                <option value="General">General</option>
+                {sectors.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
               </Select>
             </div>
             <div><Label>Location</Label><Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. London" /></div>
