@@ -13,20 +13,20 @@ import { Plus } from "lucide-react"
 interface Employer {
   id: string
   companyName: string
-  sector: string
+  industry: string
   contactEmail: string
   user: { name: string; email: string }
   _count: { jobs: number; interviews: number }
   createdAt: string
 }
 
-const SECTORS = ["Technology", "Health & Social Care", "Education", "Finance", "Construction", "Retail", "Manufacturing", "Hospitality"]
+const INDUSTRIES = ["Technology", "Health & Social Care", "Education", "Finance", "Construction", "Retail", "Manufacturing", "Hospitality"]
 
 export default function AdminEmployersPage() {
   const [employers, setEmployers] = useState<Employer[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [form, setForm] = useState({ name: "", email: "", companyName: "", sector: "", contactEmail: "" })
+  const [form, setForm] = useState({ name: "", email: "", companyName: "", industry: "", contactEmail: "" })
   const [creating, setCreating] = useState(false)
   const [newCredential, setNewCredential] = useState<{ email: string; password: string; companyName: string } | null>(null)
   const [error, setError] = useState("")
@@ -52,13 +52,13 @@ export default function AdminEmployersPage() {
       return
     }
     setNewCredential({ email: data.email, password: data.generatedPassword, companyName: data.companyName })
-    setForm({ name: "", email: "", companyName: "", sector: "", contactEmail: "" })
+    setForm({ name: "", email: "", companyName: "", industry: "", contactEmail: "" })
     fetchEmployers()
   }
 
   const columns: Column<Employer>[] = [
     { key: "companyName", label: "Company", sortable: true },
-    { key: "sector", label: "Sector", sortable: true },
+    { key: "industry", label: "Industry", sortable: true },
     { key: "contactEmail", label: "Contact", sortable: true, render: (r) => r.contactEmail || r.user.email },
     { key: "jobs", label: "Jobs", sortable: true, render: (r) => r._count.jobs },
     { key: "interviews", label: "Interviews", sortable: true, render: (r) => r._count.interviews },
@@ -97,10 +97,10 @@ export default function AdminEmployersPage() {
                   <div><Label>Login Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@techcorp.com" /></div>
                   <div><Label>Company Name</Label><Input value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} placeholder="TechCorp Ltd" /></div>
                   <div>
-                    <Label>Sector</Label>
-                    <Select value={form.sector} onChange={(e) => setForm({ ...form, sector: e.target.value })}>
-                      <option value="">Select sector...</option>
-                      {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                    <Label>Industry</Label>
+                    <Select value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })}>
+                      <option value="">Select industry...</option>
+                      {INDUSTRIES.map(s => <option key={s} value={s}>{s}</option>)}
                     </Select>
                   </div>
                   <div><Label>Contact Email (optional)</Label><Input type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} placeholder="hr@techcorp.com" /></div>
