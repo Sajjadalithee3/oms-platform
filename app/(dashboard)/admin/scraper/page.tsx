@@ -24,6 +24,7 @@ interface JobBoard {
   lastJobCount: number
   filterLocation: string | null
   filterCategory: string | null
+  defaultSector: string | null
   maxJobs: number
   filterDummy: boolean
 }
@@ -45,15 +46,19 @@ export default function AdminScraperPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [editingFilters, setEditingFilters] = useState<string | null>(null)
   const [form, setForm] = useState({ name: "", type: "RSS", baseUrl: "", apiKey: "" })
-  const [filterForm, setFilterForm] = useState({ filterLocation: "", filterCategory: "", maxJobs: "100", scheduleTime: "06:00", schedule: "DAILY", filterDummy: true })
+  const [filterForm, setFilterForm] = useState({ filterLocation: "", filterCategory: "", defaultSector: "", maxJobs: "100", scheduleTime: "06:00", schedule: "DAILY", filterDummy: true })
   const [seeding, setSeeding] = useState(false)
   const [seedResult, setSeedResult] = useState<{ success: boolean; boards: Array<{ name: string; status: string }> } | null>(null)
+  const [sectors, setSectors] = useState<{ id: string; name: string }[]>([])
 
   const fetchBoards = () => {
     fetch("/api/scraper/boards").then(r => r.json()).then(d => { setBoards(d); setLoading(false) })
   }
 
-  useEffect(() => { fetchBoards() }, [])
+  useEffect(() => {
+    fetchBoards()
+    fetch("/api/sectors").then(r => r.json()).then(setSectors)
+  }, [])
 
   const feedTypes = ["RSS", "INDEED", "CV_LIBRARY", "MONSTER", "GOVUK"]
   const addBoard = async () => {
@@ -96,6 +101,7 @@ export default function AdminScraperPage() {
     setFilterForm({
       filterLocation: board.filterLocation || "",
       filterCategory: board.filterCategory || "",
+      defaultSector: board.defaultSector || "",
       maxJobs: String(board.maxJobs || 100),
       scheduleTime: board.scheduleTime || "06:00",
       schedule: board.schedule || "DAILY",
@@ -110,6 +116,7 @@ export default function AdminScraperPage() {
       body: JSON.stringify({
         filterLocation: filterForm.filterLocation || null,
         filterCategory: filterForm.filterCategory || null,
+        defaultSector: filterForm.defaultSector || null,
         maxJobs: parseInt(filterForm.maxJobs) || 100,
         scheduleTime: filterForm.scheduleTime,
         schedule: filterForm.schedule,
@@ -241,6 +248,14 @@ export default function AdminScraperPage() {
                         <Label className="text-xs">Category Filter</Label>
                         <Input placeholder="e.g. healthcare, technology, nursing" value={filterForm.filterCategory} onChange={e => setFilterForm({ ...filterForm, filterCategory: e.target.value })} className="text-sm" />
                         <p className="text-xs text-gray-400 mt-1">Matches against category, sector, or title.</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Sector</Label>
+                        <Select value={filterForm.defaultSector} onChange={e => setFilterForm({ ...filterForm, defaultSector: e.target.value })}>
+                          <option value="">Auto-detect from title/description</option>
+                          {sectors.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                        </Select>
+                        <p className="text-xs text-gray-400 mt-1">Every job this board fetches gets tagged with this sector, guaranteed.</p>
                       </div>
                       <div>
                         <Label className="text-xs">Max Jobs to Fetch</Label>

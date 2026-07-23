@@ -348,6 +348,7 @@ model JobBoard {
   fieldMappings     String    @default("{}")
   filterLocation    String?
   filterCategory    String?
+  defaultSector     String?
   maxJobs           Int       @default(100)
   filterDummy       Boolean   @default(true)
   createdAt         DateTime  @default(now())

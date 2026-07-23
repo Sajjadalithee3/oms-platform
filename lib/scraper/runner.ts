@@ -80,7 +80,7 @@ export async function runScraper(boardId: string) {
     for (const job of filtered) {
       const externalId = String(job.externalId || `${job.title}-${job.company}`)
       const existing = await prisma.job.findFirst({ where: { externalId } })
-      const sector = inferSector(String(job.title || ""), String(job.description || ""))
+      const sector = board.defaultSector || inferSector(String(job.title || ""), String(job.description || ""))
 
       // Normalize requiredSkills to JSON array
       if (job.requiredSkills && typeof job.requiredSkills === "string") {
