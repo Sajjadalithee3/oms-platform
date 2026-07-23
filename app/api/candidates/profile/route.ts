@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { calculateJobSeekerCompletion, calculateLearnerCompletion } from "@/lib/profile-completion"
+import { runMatchingForCandidate } from "@/lib/matching"
 
 export async function GET() {
   const session = await auth()
@@ -74,6 +75,10 @@ export async function PUT(request: Request) {
       },
     })
 
+    if (desiredSectors || skills) {
+      await runMatchingForCandidate(profile.id, "JOB_SEEKER")
+    }
+
     return NextResponse.json({ ...profile, profileComplete: completion.percentage, incomplete: completion.incomplete })
   }
 
@@ -108,6 +113,10 @@ export async function PUT(request: Request) {
         detail: "Profile updated",
       },
     })
+
+    if (desiredSectors || skills) {
+      await runMatchingForCandidate(profile.id, "LEARNER")
+    }
 
     return NextResponse.json({ ...profile, profileComplete: completion.percentage, incomplete: completion.incomplete })
   }
