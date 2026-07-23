@@ -24,6 +24,7 @@ export default function JobSeekerJobsPage() {
   const router = useRouter()
   const [jobs, setJobs] = useState<Job[]>([])
   const [matches, setMatches] = useState<Record<string, Match>>({})
+  const [sectors, setSectors] = useState<{ id: string; name: string }[]>([])
   const [search, setSearch] = useState("")
   const [sectorFilter, setSectorFilter] = useState("")
   const [locationFilter, setLocationFilter] = useState("")
@@ -32,6 +33,7 @@ export default function JobSeekerJobsPage() {
 
   useEffect(() => {
     fetch("/api/jobs").then((r) => r.json()).then(setJobs)
+    fetch("/api/sectors").then((r) => r.json()).then(setSectors)
     fetch("/api/candidates/profile").then(async (r) => {
       if (r.ok) {
         const profile = await r.json()
@@ -68,14 +70,7 @@ export default function JobSeekerJobsPage() {
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search jobs..." className="max-w-sm" />
           <Select value={sectorFilter} onChange={(e) => setSectorFilter(e.target.value)} className="max-w-[200px]">
             <option value="">All Sectors</option>
-            <option value="Health & Social Care">Health & Social Care</option>
-            <option value="Technology">Technology</option>
-            <option value="Education">Education</option>
-            <option value="Finance">Finance</option>
-            <option value="Construction">Construction</option>
-            <option value="Marketing & Sales">Marketing & Sales</option>
-            <option value="Logistics">Logistics</option>
-            <option value="General">General</option>
+            {sectors.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
           </Select>
           <Input value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} placeholder="Location..." className="max-w-[180px]" />
           <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="max-w-[180px]">
