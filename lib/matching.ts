@@ -75,6 +75,12 @@ export function calculateMatchScore(candidate: CandidateProfile, job: JobData): 
   const missingSkills = jobSkills.filter((js) =>
     !candidateSkills.some((s) => s.toLowerCase().includes(js.toLowerCase()) || js.toLowerCase().includes(s.toLowerCase()))
   )
+
+  if (candidateSkills.length === 0) {
+    const sectorOnlyScore = calculateSectorScore(candidate.desiredSectors, job.sector, 100)
+    return { score: sectorOnlyScore, matchedSkills, missingSkills }
+  }
+
   const skillsScore = jobSkills.length > 0 ? (matchedSkills.length / jobSkills.length) * weights.skills : 0
 
   const sectorScore = calculateSectorScore(candidate.desiredSectors, job.sector, weights.sector)
