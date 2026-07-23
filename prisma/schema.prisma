@@ -371,6 +371,13 @@ model Notification {
   createdAt         DateTime  @default(now())
 }
 
+model Sector {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
 model Advertisement {
   id            String    @id @default(cuid())
   type          String

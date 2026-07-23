@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, Users, Briefcase, Settings, BarChart3, FileText, MessageSquare,
   Building2, GraduationCap, UserCheck, ClipboardList, Search, Target,
-  BookOpen, FolderOpen, Shield, LogOut, Menu, X, Megaphone
+  BookOpen, FolderOpen, Shield, LogOut, Menu, X, Megaphone, Tag
 } from "lucide-react"
 
 interface NavItem {
@@ -25,6 +25,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Employers", href: "/admin/employers", icon: <Building2 className="h-5 w-5" /> },
     { label: "Jobs", href: "/admin/jobs", icon: <Briefcase className="h-5 w-5" /> },
     { label: "Users", href: "/admin/users", icon: <Users className="h-5 w-5" /> },
+    { label: "Sectors", href: "/admin/sectors", icon: <Tag className="h-5 w-5" /> },
     { label: "Scraper", href: "/admin/scraper", icon: <Search className="h-5 w-5" /> },
     { label: "Matching", href: "/admin/matching", icon: <Target className="h-5 w-5" /> },
     { label: "Messages", href: "/admin/messages", icon: <MessageSquare className="h-5 w-5" /> },
