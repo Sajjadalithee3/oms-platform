@@ -1,4 +1,7 @@
 {
   "buildCommand": "npx prisma generate && npx prisma db push --accept-data-loss && if [ \"$SEED_ON_DEPLOY\" = \"true\" ]; then npx prisma db seed; fi && next build",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "crons": [
+    { "path": "/api/scraper/cron", "schedule": "0 7 * * *" }
+  ]
 }
