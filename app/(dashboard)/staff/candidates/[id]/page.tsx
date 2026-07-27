@@ -20,10 +20,11 @@ interface CandidateDetail {
   courseSector?: string
   provider?: string
   bio?: string
-  desiredRole?: string
-  desiredSalary?: number
+  desiredSectors?: string
+  desiredSalaryMin?: number
+  desiredSalaryMax?: number
   experience?: Array<{ title: string; company: string; startDate: string; endDate?: string }>
-  education?: Array<{ institution: string; qualification: string; year: string }>
+  education?: Array<{ institution: string; degree?: string; field?: string; startDate?: string; endDate?: string }>
 }
 
 interface Match {
@@ -41,7 +42,9 @@ export default function StaffCandidateDetailPage() {
   const [matching, setMatching] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/candidates/profile?userId=${id}`).then(r => r.json()).then(d => {
+    fetch(`/api/candidates/profile?userId=${id}`).then(async (r) => {
+      if (!r.ok) { setCandidate(null); setLoading(false); return }
+      const d = await r.json()
       setCandidate(d)
       setLoading(false)
     })
@@ -57,7 +60,10 @@ export default function StaffCandidateDetailPage() {
   if (loading) return <><TopBar title="Candidate Detail" /><div className="p-6 text-gray-500">Loading...</div></>
   if (!candidate) return <><TopBar title="Candidate Detail" /><div className="p-6 text-red-500">Candidate not found.</div></>
 
-  const skills = candidate.skills ? candidate.skills.split(",") : []
+  let skills: string[] = []
+  try { skills = candidate.skills ? JSON.parse(candidate.skills) : [] } catch { skills = [] }
+  let desiredSectors: string[] = []
+  try { desiredSectors = candidate.desiredSectors ? JSON.parse(candidate.desiredSectors) : [] } catch { desiredSectors = [] }
 
   return (
     <>
@@ -84,7 +90,7 @@ export default function StaffCandidateDetailPage() {
             <div><p className="text-sm text-gray-500">Phone</p><p className="font-medium">{candidate.phone || "Not provided"}</p></div>
             <div><p className="text-sm text-gray-500">Location</p><p className="font-medium">{candidate.location || "Not provided"}</p></div>
             <div><p className="text-sm text-gray-500">Profile Complete</p><p className="font-medium">{candidate.profileComplete}%</p></div>
-            {candidate.desiredRole && <div><p className="text-sm text-gray-500">Desired Role</p><p className="font-medium">{candidate.desiredRole}</p></div>}
+            {desiredSectors.length > 0 && <div><p className="text-sm text-gray-500">Desired Sectors</p><p className="font-medium">{desiredSectors.join(", ")}</p></div>}
             {candidate.courseSector && <div><p className="text-sm text-gray-500">Course Sector</p><p className="font-medium">{candidate.courseSector}</p></div>}
             {candidate.provider && <div><p className="text-sm text-gray-500">Provider</p><p className="font-medium">{candidate.provider}</p></div>}
           </CardContent>

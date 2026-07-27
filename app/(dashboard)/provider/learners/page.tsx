@@ -95,7 +95,7 @@ export default function ProviderLearnersPage() {
 
   useEffect(() => {
     refreshLearners()
-    fetch("/api/providers/cohorts").then((r) => r.json()).then(setCohorts)
+    fetch("/api/providers/cohorts").then((r) => (r.ok ? r.json() : [])).then(setCohorts)
   }, [])
 
   async function createLearner() {

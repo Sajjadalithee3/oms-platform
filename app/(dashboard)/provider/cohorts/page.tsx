@@ -25,8 +25,8 @@ export default function ProviderCohortsPage() {
   const [form, setForm] = useState({ courseId: "", name: "", startDate: "", endDate: "", expectedLearners: "" })
 
   useEffect(() => {
-    fetch("/api/providers/cohorts").then((r) => r.json()).then(setCohorts)
-    fetch("/api/providers/courses").then((r) => r.json()).then(setCourses)
+    fetch("/api/providers/cohorts").then((r) => (r.ok ? r.json() : [])).then(setCohorts)
+    fetch("/api/providers/courses").then((r) => (r.ok ? r.json() : [])).then(setCourses)
   }, [])
 
   async function createCohort() {
@@ -36,7 +36,7 @@ export default function ProviderCohortsPage() {
     })
     if (res.ok) {
       setDialogOpen(false); setForm({ courseId: "", name: "", startDate: "", endDate: "", expectedLearners: "" })
-      const data = await fetch("/api/providers/cohorts").then((r) => r.json()); setCohorts(data)
+      const data = await fetch("/api/providers/cohorts").then((r) => (r.ok ? r.json() : [])); setCohorts(data)
     }
   }
 

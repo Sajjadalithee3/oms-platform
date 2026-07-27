@@ -46,7 +46,9 @@ export default function StaffCandidatesPage() {
     { key: "profileComplete", label: "Profile %", sortable: true, render: (r) => `${r.profileComplete}%` },
     { key: "ragStatus", label: "RAG", render: (r) => r.ragStatus ? <Badge className={ragColor(r.ragStatus)}>{r.ragStatus}</Badge> : <span className="text-gray-400">N/A</span> },
     { key: "skills", label: "Skills", render: (r) => {
-      const s = r.skills ? r.skills.split(",").slice(0, 3) : []
+      let parsed: string[] = []
+      try { parsed = r.skills ? JSON.parse(r.skills) : [] } catch { parsed = [] }
+      const s = parsed.slice(0, 3)
       return <div className="flex gap-1 flex-wrap">{s.map((sk: string) => <Badge key={sk} className="bg-gray-100 text-gray-600 text-xs">{sk.trim()}</Badge>)}</div>
     }},
   ]
