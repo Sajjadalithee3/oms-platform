@@ -22,8 +22,8 @@ interface User {
 }
 
 const ROLES = ["ALL", "SUPER_ADMIN", "INTERNAL_STAFF", "TRAINING_PROVIDER", "EMPLOYER", "LEARNER", "JOB_SEEKER"]
-const CREATE_ROLES = ["INTERNAL_STAFF", "TRAINING_PROVIDER", "EMPLOYER", "LEARNER", "JOB_SEEKER"]
-const EDIT_ROLES = ["INTERNAL_STAFF", "TRAINING_PROVIDER", "EMPLOYER", "LEARNER", "JOB_SEEKER"]
+const CREATE_ROLES = ["SUPER_ADMIN", "INTERNAL_STAFF", "TRAINING_PROVIDER", "EMPLOYER", "LEARNER", "JOB_SEEKER"]
+const EDIT_ROLES = ["SUPER_ADMIN", "INTERNAL_STAFF", "TRAINING_PROVIDER", "EMPLOYER", "LEARNER", "JOB_SEEKER"]
 
 export default function AdminUsersPage() {
   const router = useRouter()
@@ -65,6 +65,9 @@ export default function AdminUsersPage() {
   }
 
   const createUser = async () => {
+    if (form.role === "SUPER_ADMIN" && !confirm(`Grant full Super Admin access to ${form.name || "this user"}? They will have unrestricted access to the entire platform.`)) {
+      return
+    }
     setCreating(true)
     setError("")
     const res = await fetch("/api/admin/users", {
@@ -92,6 +95,9 @@ export default function AdminUsersPage() {
 
   const saveEdit = async () => {
     if (!editingUser) return
+    if (editForm.role === "SUPER_ADMIN" && editingUser.role !== "SUPER_ADMIN" && !confirm(`Grant full Super Admin access to ${editForm.name || "this user"}? They will have unrestricted access to the entire platform.`)) {
+      return
+    }
     setEditSaving(true)
     setEditError("")
     const res = await fetch(`/api/admin/users/${editingUser.id}`, {

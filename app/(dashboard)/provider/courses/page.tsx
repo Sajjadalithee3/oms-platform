@@ -26,12 +26,16 @@ interface Course {
 
 export default function ProviderCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
+  const [sectors, setSectors] = useState<{ id: string; name: string }[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState({ name: "", sector: "", duration: "", description: "" })
   const [skillInput, setSkillInput] = useState("")
   const [skills, setSkills] = useState<string[]>([])
 
-  useEffect(() => { loadCourses() }, [])
+  useEffect(() => {
+    loadCourses()
+    fetch("/api/sectors").then((r) => (r.ok ? r.json() : [])).then(setSectors)
+  }, [])
 
   async function loadCourses() {
     const res = await fetch("/api/providers/courses")
@@ -94,14 +98,7 @@ export default function ProviderCoursesPage() {
                   <Label>Sector</Label>
                   <Select value={form.sector} onChange={(e) => setForm({ ...form, sector: e.target.value })}>
                     <option value="">Select sector...</option>
-                    <option value="Health & Social Care">Health & Social Care</option>
-                    <option value="Technology">Technology</option>
-                    <option value="Education">Education</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Construction">Construction</option>
-                    <option value="Marketing & Sales">Marketing & Sales</option>
-                    <option value="Logistics">Logistics</option>
-                    <option value="General">General</option>
+                    {sectors.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
                   </Select>
                 </div>
                 <div><Label>Duration</Label><Input value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="e.g. 12 weeks" /></div>

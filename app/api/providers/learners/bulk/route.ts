@@ -2,8 +2,6 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getProviderQuotaStatus } from "@/lib/quota"
-import { sendBatchEmails } from "@/lib/email"
-import { credentialsEmailTemplate } from "@/lib/email-templates"
 import bcrypt from "bcryptjs"
 
 function generatePassword(): string {
@@ -22,11 +20,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const provider = await prisma.providerProfile.findUnique({ where: { userId: session.user.id } })
-  if (!provider) return NextResponse.json({ error: "Provider not found" }, { status: 404 })
-
   const body = await request.json()
-  const { learners } = body as { learners: Array<{ name: string; email: string; cohortId?: string; courseName?: string; courseSector?: string }> }
+  const { learners, providerId } = body as { learners: Array<{ name: string; email: string; cohortId?: string; courseName?: string; courseSector?: string }>; providerId?: string }
+
+  const provider = session.user.role === "SUPER_ADMIN" && providerId
+    ? await prisma.providerProfile.findUnique({ where: { id: providerId } })
+    : await prisma.providerProfile.findUnique({ where: { userId: session.user.id } })
+  if (!provider) return NextResponse.json({ error: "Provider not found" }, { status: 404 })
 
   if (!learners || !Array.isArray(learners) || learners.length === 0) {
     return NextResponse.json({ error: "No learners provided" }, { status: 400 })
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   let remainingQuota = quotaStatus.remaining
   let skippedDueToQuota = 0
 
-  const results: Array<{ name: string; email: string; password: string; status: "created" | "skipped"; reason?: string }> = []
+  const results: Array<{ learnerId?: string; name: string; email: string; password: string; status: "created" | "skipped"; reason?: string }> = []
 
   for (const learner of learners) {
     if (remainingQuota <= 0) {
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       data: { email: learner.email, password: hashedPassword, name: learner.name, role: "LEARNER", mustChangePassword: true },
     })
 
-    await prisma.learnerProfile.create({
+    const learnerProfile = await prisma.learnerProfile.create({
       data: {
         userId: user.id,
         providerId: provider.id,
@@ -79,17 +79,10 @@ export async function POST(request: Request) {
     })
 
     remainingQuota--
-    results.push({ name: learner.name, email: learner.email, password, status: "created" })
+    results.push({ learnerId: learnerProfile.id, name: learner.name, email: learner.email, password, status: "created" })
   }
 
   const createdCount = results.filter(r => r.status === "created").length
-
-  const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`
-  const { sent: emailsSent, failed: emailsFailed } = await sendBatchEmails(
-    results
-      .filter(r => r.status === "created")
-      .map(r => ({ to: r.email, ...credentialsEmailTemplate({ name: r.name, email: r.email, password: r.password, loginUrl }) }))
-  )
 
   await prisma.auditLog.create({
     data: {
@@ -106,8 +99,6 @@ export async function POST(request: Request) {
     created: createdCount,
     skipped: results.length - createdCount,
     skippedDueToQuota,
-    emailsSent,
-    emailsFailed,
     quota: { cap: quotaStatus.cap, used: quotaStatus.used + createdCount, remaining: Math.max(0, quotaStatus.remaining - createdCount) },
   }, { status: 201 })
 }

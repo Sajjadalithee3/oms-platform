@@ -10,7 +10,7 @@ export async function GET() {
   const learners = await prisma.learnerProfile.findMany({
     include: {
       user: { select: { name: true, email: true, lastLoginAt: true } },
-      provider: { select: { organisationName: true } },
+      provider: { select: { id: true, organisationName: true } },
     },
     orderBy: { createdAt: "desc" },
   })

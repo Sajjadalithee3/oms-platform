@@ -2,14 +2,19 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   if (session.user.role !== "TRAINING_PROVIDER" && session.user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const provider = await prisma.providerProfile.findUnique({ where: { userId: session.user.id } })
+  const { searchParams } = new URL(request.url)
+  const providerId = searchParams.get("providerId")
+
+  const provider = session.user.role === "SUPER_ADMIN" && providerId
+    ? await prisma.providerProfile.findUnique({ where: { id: providerId } })
+    : await prisma.providerProfile.findUnique({ where: { userId: session.user.id } })
   if (!provider) return NextResponse.json({ error: "Provider not found" }, { status: 404 })
 
   const courses = await prisma.course.findMany({

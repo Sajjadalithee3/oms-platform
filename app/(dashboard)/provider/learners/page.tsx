@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { StatCard } from "@/components/dashboard/StatCard"
-import { Plus, Download, Award, Upload, FileText, Pencil, Trash2, AlertTriangle, CheckCircle2, Clock, UserX, Bell, Send } from "lucide-react"
+import { Plus, Download, Award, Upload, FileText, Pencil, Trash2, AlertTriangle, CheckCircle2, Clock, UserX, Bell, Send, BookOpen } from "lucide-react"
 
 interface Learner {
   id: string
@@ -32,6 +32,7 @@ interface Learner {
 interface Cohort { id: string; name: string }
 
 interface BulkResult {
+  learnerId?: string
   name: string
   email: string
   password: string
@@ -41,6 +42,7 @@ interface BulkResult {
 
 interface CVBulkResult {
   fileName: string
+  learnerId?: string
   status: "created" | "failed"
   name: string
   email: string
@@ -52,13 +54,21 @@ interface CVBulkResult {
   error?: string
 }
 
+interface Course { id: string; name: string; sector: string }
+
 export default function ProviderLearnersPage() {
   const [learners, setLearners] = useState<Learner[]>([])
   const [cohorts, setCohorts] = useState<Cohort[]>([])
+  const [sectors, setSectors] = useState<{ id: string; name: string }[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false)
   const [form, setForm] = useState({ name: "", email: "", cohortId: "", courseName: "", courseSector: "" })
-  const [newCredential, setNewCredential] = useState<{ email: string; password: string } | null>(null)
+  const [newCredential, setNewCredential] = useState<{ learnerId: string; email: string; password: string } | null>(null)
+  const [sendingCreds, setSendingCreds] = useState(false)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [assignCourseOpen, setAssignCourseOpen] = useState(false)
+  const [assignCourseId, setAssignCourseId] = useState("")
+  const [assigningCourse, setAssigningCourse] = useState(false)
   const [bulkResults, setBulkResults] = useState<BulkResult[] | null>(null)
   const [bulkUploading, setBulkUploading] = useState(false)
   const [bulkError, setBulkError] = useState("")
@@ -96,6 +106,8 @@ export default function ProviderLearnersPage() {
   useEffect(() => {
     refreshLearners()
     fetch("/api/providers/cohorts").then((r) => (r.ok ? r.json() : [])).then(setCohorts)
+    fetch("/api/sectors").then((r) => (r.ok ? r.json() : [])).then(setSectors)
+    fetch("/api/providers/courses").then((r) => (r.ok ? r.json() : [])).then(setCourses)
   }, [])
 
   async function createLearner() {
@@ -105,9 +117,49 @@ export default function ProviderLearnersPage() {
     })
     if (res.ok) {
       const data = await res.json()
-      setNewCredential({ email: data.user.email, password: data.generatedPassword })
+      setNewCredential({ learnerId: data.learner.id, email: data.user.email, password: data.generatedPassword })
       setForm({ name: "", email: "", cohortId: "", courseName: "", courseSector: "" })
       refreshLearners()
+    }
+  }
+
+  async function sendCredentialsNow(learnerIds: string[]) {
+    setSendingCreds(true)
+    const res = await fetch("/api/providers/learners/send-credentials", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ learnerIds }),
+    })
+    setSendingCreds(false)
+    if (res.ok) {
+      const data = await res.json()
+      alert(`Login details sent to ${data.sent} learner${data.sent !== 1 ? "s" : ""}${data.failed ? `, ${data.failed} failed` : ""}.`)
+      refreshLearners()
+    }
+  }
+
+  function assignCourseToBatch(learnerIds: string[]) {
+    setSelectedIds(new Set(learnerIds))
+    setAssignCourseOpen(true)
+  }
+
+  async function assignCourse() {
+    if (!assignCourseId) return
+    setAssigningCourse(true)
+    const res = await fetch("/api/providers/learners/bulk-assign-course", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ learnerIds: Array.from(selectedIds), courseId: assignCourseId }),
+    })
+    setAssigningCourse(false)
+    if (res.ok) {
+      const data = await res.json()
+      setAssignCourseOpen(false)
+      setAssignCourseId("")
+      refreshLearners()
+      const ids = Array.from(selectedIds)
+      setSelectedIds(new Set())
+      if (confirm(`Course assigned to ${data.updated} learner(s). Send login details to them now?`)) {
+        await sendCredentialsNow(ids)
+      }
     }
   }
 
@@ -413,9 +465,17 @@ export default function ProviderLearnersPage() {
         {selectedIds.size > 0 && (
           <div className="flex items-center justify-between bg-[#5B4FE8]/5 border border-[#5B4FE8]/20 rounded-md p-3">
             <span className="text-sm font-medium text-[#5B4FE8]">{selectedIds.size} learner{selectedIds.size !== 1 ? "s" : ""} selected</span>
-            <Button size="sm" onClick={() => { setNotifyForm({ title: "", body: "", link: "", sendEmail: false }); setNotifyResult(null); setNotifyDialogOpen(true) }}>
-              <Send className="h-4 w-4 mr-2" />Notify Selected
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setAssignCourseOpen(true)}>
+                <BookOpen className="h-4 w-4 mr-2" />Assign Course
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => sendCredentialsNow(Array.from(selectedIds))} disabled={sendingCreds}>
+                <Send className="h-4 w-4 mr-2" />{sendingCreds ? "Sending..." : "Send Login Details"}
+              </Button>
+              <Button size="sm" onClick={() => { setNotifyForm({ title: "", body: "", link: "", sendEmail: false }); setNotifyResult(null); setNotifyDialogOpen(true) }}>
+                <Send className="h-4 w-4 mr-2" />Notify Selected
+              </Button>
+            </div>
           </div>
         )}
         <div className="flex justify-end gap-2">
@@ -462,11 +522,22 @@ export default function ProviderLearnersPage() {
                     ))}
                   </div>
                   {cvBulkResults.some(r => r.status === "created") && (
-                    <Button variant="outline" onClick={downloadCvBulkCredentials} className="w-full">
-                      <Download className="h-4 w-4 mr-2" />Download Credentials CSV
-                    </Button>
+                    <>
+                      <Button variant="outline" onClick={downloadCvBulkCredentials} className="w-full">
+                        <Download className="h-4 w-4 mr-2" />Download Credentials CSV
+                      </Button>
+                      <p className="text-sm text-gray-600">Send their login details now, or assign a course first?</p>
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1" onClick={() => { assignCourseToBatch(cvBulkResults.filter(r => r.status === "created" && r.learnerId).map(r => r.learnerId!)); setCvBulkDialogOpen(false); setCvBulkResults(null) }}>
+                          Assign course first
+                        </Button>
+                        <Button className="flex-1" disabled={sendingCreds} onClick={async () => { await sendCredentialsNow(cvBulkResults.filter(r => r.status === "created" && r.learnerId).map(r => r.learnerId!)); setCvBulkDialogOpen(false); setCvBulkResults(null) }}>
+                          {sendingCreds ? "Sending..." : "Send login details"}
+                        </Button>
+                      </div>
+                    </>
                   )}
-                  <Button onClick={() => { setCvBulkDialogOpen(false); setCvBulkResults(null) }} className="w-full">Done</Button>
+                  <Button variant="outline" onClick={() => { setCvBulkDialogOpen(false); setCvBulkResults(null) }} className="w-full">Close</Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -483,7 +554,7 @@ export default function ProviderLearnersPage() {
                   <div className="grid grid-cols-1 gap-3">
                     <div><Label>Cohort (optional)</Label><Select value={cvBulkForm.cohortId} onChange={(e) => setCvBulkForm({ ...cvBulkForm, cohortId: e.target.value })}><option value="">Select cohort...</option>{cohorts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></div>
                     <div><Label>Course Name (optional)</Label><Input value={cvBulkForm.courseName} onChange={(e) => setCvBulkForm({ ...cvBulkForm, courseName: e.target.value })} placeholder="e.g. Web Development" /></div>
-                    <div><Label>Course Sector (optional)</Label><Select value={cvBulkForm.courseSector} onChange={(e) => setCvBulkForm({ ...cvBulkForm, courseSector: e.target.value })}><option value="">Select sector...</option><option value="Health & Social Care">Health & Social Care</option><option value="Technology">Technology</option><option value="Education">Education</option><option value="Finance">Finance</option><option value="Construction">Construction</option></Select></div>
+                    <div><Label>Course Sector (optional)</Label><Select value={cvBulkForm.courseSector} onChange={(e) => setCvBulkForm({ ...cvBulkForm, courseSector: e.target.value })}><option value="">Select sector...</option>{sectors.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}</Select></div>
                   </div>
                   <p className="text-xs text-gray-500">Max 50 CVs per batch. Passwords auto-generated. Matching runs automatically.</p>
                 </div>
@@ -517,11 +588,22 @@ export default function ProviderLearnersPage() {
                     ))}
                   </div>
                   {bulkResults.some(r => r.status === "created") && (
-                    <Button variant="outline" onClick={downloadBulkCredentials} className="w-full">
-                      <Download className="h-4 w-4 mr-2" />Download Credentials CSV
-                    </Button>
+                    <>
+                      <Button variant="outline" onClick={downloadBulkCredentials} className="w-full">
+                        <Download className="h-4 w-4 mr-2" />Download Credentials CSV
+                      </Button>
+                      <p className="text-sm text-gray-600">Send their login details now, or assign a course first?</p>
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1" onClick={() => { assignCourseToBatch(bulkResults.filter(r => r.status === "created" && r.learnerId).map(r => r.learnerId!)); setBulkDialogOpen(false); setBulkResults(null) }}>
+                          Assign course first
+                        </Button>
+                        <Button className="flex-1" disabled={sendingCreds} onClick={async () => { await sendCredentialsNow(bulkResults.filter(r => r.status === "created" && r.learnerId).map(r => r.learnerId!)); setBulkDialogOpen(false); setBulkResults(null) }}>
+                          {sendingCreds ? "Sending..." : "Send login details"}
+                        </Button>
+                      </div>
+                    </>
                   )}
-                  <Button onClick={() => { setBulkDialogOpen(false); setBulkResults(null) }} className="w-full">Done</Button>
+                  <Button variant="outline" onClick={() => { setBulkDialogOpen(false); setBulkResults(null) }} className="w-full">Close</Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -552,12 +634,18 @@ export default function ProviderLearnersPage() {
               {newCredential ? (
                 <div className="space-y-3">
                   <div className="bg-green-50 border border-green-200 rounded-md p-4">
-                    <p className="text-sm font-medium text-green-800">Login credentials generated:</p>
+                    <p className="text-sm font-medium text-green-800">Learner account created:</p>
                     <p className="text-sm mt-1"><strong>Email:</strong> {newCredential.email}</p>
-                    <p className="text-sm"><strong>Password:</strong> {newCredential.password}</p>
                   </div>
-                  <p className="text-xs text-gray-500">Save these credentials — the password cannot be retrieved later.</p>
-                  <Button onClick={() => { setDialogOpen(false); setNewCredential(null) }} className="w-full">Done</Button>
+                  <p className="text-sm text-gray-600">Send their login details now, or assign a course first?</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => { assignCourseToBatch([newCredential.learnerId]); setDialogOpen(false); setNewCredential(null) }}>
+                      Assign course first
+                    </Button>
+                    <Button className="flex-1" disabled={sendingCreds} onClick={async () => { await sendCredentialsNow([newCredential.learnerId]); setDialogOpen(false); setNewCredential(null) }}>
+                      {sendingCreds ? "Sending..." : "Send login details"}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -569,11 +657,7 @@ export default function ProviderLearnersPage() {
                     <Label>Course Sector</Label>
                     <Select value={form.courseSector} onChange={(e) => setForm({ ...form, courseSector: e.target.value })}>
                       <option value="">Select sector...</option>
-                      <option value="Health & Social Care">Health & Social Care</option>
-                      <option value="Technology">Technology</option>
-                      <option value="Education">Education</option>
-                      <option value="Finance">Finance</option>
-                      <option value="Construction">Construction</option>
+                      {sectors.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
                     </Select>
                   </div>
                   <Button onClick={createLearner} disabled={!form.name || !form.email} className="w-full">Create Learner</Button>
@@ -611,11 +695,7 @@ export default function ProviderLearnersPage() {
               <Label>Course Sector</Label>
               <Select value={editForm.courseSector} onChange={(e) => setEditForm({ ...editForm, courseSector: e.target.value })}>
                 <option value="">Select sector...</option>
-                <option value="Health & Social Care">Health & Social Care</option>
-                <option value="Technology">Technology</option>
-                <option value="Education">Education</option>
-                <option value="Finance">Finance</option>
-                <option value="Construction">Construction</option>
+                {sectors.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
               </Select>
             </div>
             <div>
@@ -692,6 +772,25 @@ export default function ProviderLearnersPage() {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Course Dialog */}
+      <Dialog open={assignCourseOpen} onOpenChange={(open) => { setAssignCourseOpen(open); if (!open) setAssignCourseId("") }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Assign Course to {selectedIds.size} Learner{selectedIds.size !== 1 ? "s" : ""}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Course</Label>
+              <Select value={assignCourseId} onChange={(e) => setAssignCourseId(e.target.value)}>
+                <option value="">Select course...</option>
+                {courses.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.sector})</option>)}
+              </Select>
+            </div>
+            <Button onClick={assignCourse} disabled={!assignCourseId || assigningCourse} className="w-full">
+              {assigningCourse ? "Assigning..." : "Assign Course"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

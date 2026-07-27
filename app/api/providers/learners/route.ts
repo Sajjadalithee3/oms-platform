@@ -2,8 +2,6 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getProviderQuotaStatus } from "@/lib/quota"
-import { sendEmail } from "@/lib/email"
-import { credentialsEmailTemplate } from "@/lib/email-templates"
 import bcrypt from "bcryptjs"
 
 export async function GET() {
@@ -32,11 +30,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const provider = await prisma.providerProfile.findUnique({ where: { userId: session.user.id } })
-  if (!provider) return NextResponse.json({ error: "Provider not found" }, { status: 404 })
-
   const body = await request.json()
-  const { name, email, cohortId, courseName, courseSector, skills, phone, location } = body
+  const { name, email, cohortId, courseName, courseSector, skills, phone, location, providerId } = body
+
+  const provider = session.user.role === "SUPER_ADMIN" && providerId
+    ? await prisma.providerProfile.findUnique({ where: { id: providerId } })
+    : await prisma.providerProfile.findUnique({ where: { userId: session.user.id } })
+  if (!provider) return NextResponse.json({ error: "Provider not found" }, { status: 404 })
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) return NextResponse.json({ error: "Email already registered" }, { status: 409 })
@@ -68,9 +68,6 @@ export async function POST(request: Request) {
   await prisma.auditLog.create({
     data: { userId: session.user.id, action: "CREATE", entity: "LearnerProfile", entityId: learner.id, detail: `Learner "${name}" created by provider` },
   })
-
-  const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`
-  await sendEmail({ to: email, ...credentialsEmailTemplate({ name, email, password, loginUrl, providerName: provider.organisationName, courseName }) })
 
   return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name }, learner, generatedPassword: password }, { status: 201 })
 }

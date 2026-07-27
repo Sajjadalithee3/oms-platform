@@ -5,8 +5,6 @@ import { parseCV } from "@/lib/cv-parser"
 import { runMatchingForCandidate } from "@/lib/matching"
 import { recalculateProfileCompletion } from "@/lib/profile-completion"
 import { getProviderQuotaStatus } from "@/lib/quota"
-import { sendBatchEmails } from "@/lib/email"
-import { credentialsEmailTemplate } from "@/lib/email-templates"
 import bcrypt from "bcryptjs"
 
 const ALLOWED_TYPES = [
@@ -37,16 +35,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const provider = await prisma.providerProfile.findUnique({ where: { userId: session.user.id } })
-    if (!provider) {
-      return NextResponse.json({ error: "Provider profile not found" }, { status: 404 })
-    }
-
     const formData = await request.formData()
     const files = formData.getAll("cvs") as File[]
     const cohortId = formData.get("cohortId") as string | null
     const courseName = formData.get("courseName") as string | null
     const courseSector = formData.get("courseSector") as string | null
+    const providerId = formData.get("providerId") as string | null
+
+    const provider = session.user.role === "SUPER_ADMIN" && providerId
+      ? await prisma.providerProfile.findUnique({ where: { id: providerId } })
+      : await prisma.providerProfile.findUnique({ where: { userId: session.user.id } })
+    if (!provider) {
+      return NextResponse.json({ error: "Provider profile not found" }, { status: 404 })
+    }
 
     if (!files.length) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 })
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
 
     const results: Array<{
       fileName: string
+      learnerId?: string
       status: "created" | "failed"
       name: string
       email: string
@@ -183,6 +185,7 @@ export async function POST(request: Request) {
         remainingQuota--
         results.push({
           fileName: file.name,
+          learnerId: learnerProfile.id,
           status: "created",
           name,
           email,
@@ -201,13 +204,6 @@ export async function POST(request: Request) {
 
     const createdCount = results.filter(r => r.status === "created").length
 
-    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`
-    const { sent: emailsSent, failed: emailsFailed } = await sendBatchEmails(
-      results
-        .filter(r => r.status === "created")
-        .map(r => ({ to: r.email, ...credentialsEmailTemplate({ name: r.name, email: r.email, password: r.password, loginUrl, providerName: provider.organisationName, courseName }) }))
-    )
-
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
@@ -223,8 +219,6 @@ export async function POST(request: Request) {
       created: createdCount,
       failed: results.length - createdCount,
       skippedDueToQuota,
-      emailsSent,
-      emailsFailed,
       quota: { cap: quotaStatus.cap, used: quotaStatus.used + createdCount, remaining: Math.max(0, quotaStatus.remaining - createdCount) },
     }, { status: 201 })
   } catch (error) {
