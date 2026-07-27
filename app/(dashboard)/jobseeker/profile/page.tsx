@@ -291,7 +291,7 @@ export default function JobSeekerProfilePage() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full flex flex-wrap">
+          <TabsList className="w-full flex overflow-x-auto justify-start md:justify-center">
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="skills">Skills</TabsTrigger>
             <TabsTrigger value="experience">Experience</TabsTrigger>

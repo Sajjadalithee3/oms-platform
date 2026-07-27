@@ -2,21 +2,25 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 
 export function PasswordResetPrompt({ mustChangePassword }: { mustChangePassword: boolean }) {
   const router = useRouter()
+  const { update } = useSession()
   const [open, setOpen] = useState(mustChangePassword)
 
   const dismiss = async () => {
     setOpen(false)
     await fetch("/api/auth/password-prompt", { method: "PUT" })
+    await update({ mustChangePassword: false })
   }
 
   const dismissAndReset = async () => {
     setOpen(false)
     await fetch("/api/auth/password-prompt", { method: "PUT" })
+    await update({ mustChangePassword: false })
     router.push("/reset-password")
   }
 

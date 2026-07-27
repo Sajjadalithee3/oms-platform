@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { sendEmail } from "@/lib/email"
+import { applicationStatusEmailTemplate } from "@/lib/email-templates"
 
 async function verifyApplicationAccess(applicationId: string, userId: string, userRole: string) {
   const application = await prisma.application.findUnique({
@@ -79,13 +81,26 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
   const app = await prisma.application.findUnique({
     where: { id: params.id },
-    include: { job: true, jobSeeker: true, learner: true },
+    include: {
+      job: true,
+      jobSeeker: { include: { user: { select: { name: true, email: true } } } },
+      learner: { include: { user: { select: { name: true, email: true } } } },
+    },
   })
 
   const candidateUserId = app?.jobSeeker?.userId || app?.learner?.userId
+  const candidateUser = app?.jobSeeker?.user || app?.learner?.user
   if (candidateUserId) {
     await prisma.notification.create({
       data: { userId: candidateUserId, title: "Application Update", body: `Your application for "${app?.job.title}" is now ${status}`, type: "APPLICATION_UPDATE", link: `/${app?.jobSeeker ? "jobseeker" : "learner"}/applications/${params.id}` },
+    })
+  }
+
+  if (candidateUser?.email && app) {
+    const link = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/${app.jobSeeker ? "jobseeker" : "learner"}/applications/${params.id}`
+    await sendEmail({
+      to: candidateUser.email,
+      ...applicationStatusEmailTemplate({ name: candidateUser.name || "there", jobTitle: app.job.title, company: app.job.company, status, link }),
     })
   }
 

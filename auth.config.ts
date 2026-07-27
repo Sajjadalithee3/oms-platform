@@ -7,11 +7,14 @@ export const authConfig: NextAuthConfig = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user && user.id) {
         token.id = user.id
         token.role = (user as { role: Role }).role
         token.mustChangePassword = (user as { mustChangePassword: boolean }).mustChangePassword
+      }
+      if (trigger === "update" && session && typeof session.mustChangePassword === "boolean") {
+        token.mustChangePassword = session.mustChangePassword
       }
       return token
     },

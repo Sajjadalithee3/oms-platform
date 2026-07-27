@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   })
 
   const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`
-  await sendEmail({ to: email, ...credentialsEmailTemplate({ name, email, password, loginUrl }) })
+  await sendEmail({ to: email, ...credentialsEmailTemplate({ name, email, password, loginUrl, providerName: provider.organisationName, courseName }) })
 
   return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name }, learner, generatedPassword: password }, { status: 201 })
 }

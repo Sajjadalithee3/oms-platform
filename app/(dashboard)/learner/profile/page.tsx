@@ -242,7 +242,7 @@ export default function LearnerProfilePage() {
         {message && <div className={`p-3 rounded-md text-sm ${message.includes("success") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>{message}</div>}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full flex flex-wrap">
+          <TabsList className="w-full flex overflow-x-auto justify-start md:justify-center">
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="skills">Skills</TabsTrigger>
             <TabsTrigger value="experience">Experience</TabsTrigger>

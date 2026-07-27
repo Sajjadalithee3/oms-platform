@@ -2,6 +2,14 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { Role } from "@prisma/client"
+import { sendEmail } from "@/lib/email"
+import { welcomeEmailTemplate } from "@/lib/email-templates"
+
+const ROLE_LABELS: Record<string, string> = {
+  JOB_SEEKER: "Job Seeker",
+  EMPLOYER: "Employer",
+  TRAINING_PROVIDER: "Training Provider",
+}
 
 export async function POST(request: Request) {
   try {
@@ -68,6 +76,9 @@ export async function POST(request: Request) {
         detail: `New ${role} account created via signup`,
       },
     })
+
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`
+    await sendEmail({ to: email, ...welcomeEmailTemplate({ name, roleLabel: ROLE_LABELS[role] || role, loginUrl }) })
 
     return NextResponse.json({ id: user.id, email: user.email, role: user.role }, { status: 201 })
   } catch (error) {

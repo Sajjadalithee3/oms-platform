@@ -205,7 +205,7 @@ export async function POST(request: Request) {
     const { sent: emailsSent, failed: emailsFailed } = await sendBatchEmails(
       results
         .filter(r => r.status === "created")
-        .map(r => ({ to: r.email, ...credentialsEmailTemplate({ name: r.name, email: r.email, password: r.password, loginUrl }) }))
+        .map(r => ({ to: r.email, ...credentialsEmailTemplate({ name: r.name, email: r.email, password: r.password, loginUrl, providerName: provider.organisationName, courseName }) }))
     )
 
     await prisma.auditLog.create({

@@ -40,6 +40,8 @@ export async function GET() {
           email: l.user.email,
           password: passwordsByUserId.get(l.user.id)!,
           loginUrl,
+          providerName: provider.organisationName,
+          courseName: l.courseName,
         }),
       }))
     )

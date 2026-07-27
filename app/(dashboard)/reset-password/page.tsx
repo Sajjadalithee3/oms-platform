@@ -2,12 +2,14 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { TopBar } from "@/components/dashboard/TopBar"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
 export default function ResetPasswordPage() {
   const router = useRouter()
+  const { update } = useSession()
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
@@ -40,6 +42,7 @@ export default function ResetPasswordPage() {
       return
     }
 
+    await update({ mustChangePassword: false })
     router.push("/")
   }
 
