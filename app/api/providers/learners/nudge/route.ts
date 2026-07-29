@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendBatchEmails } from "@/lib/email"
 import { nudgeEmailTemplate } from "@/lib/email-templates"
+import { logEmail } from "@/lib/email-log"
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -31,12 +32,16 @@ export async function POST(request: Request) {
   }
 
   const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`
-  const result = await sendBatchEmails(
-    learners.map((l) => ({
-      to: l.user.email,
-      ...nudgeEmailTemplate({ name: l.user.name || "there", loginUrl }),
-    }))
-  )
+  const emails = learners.map((l) => ({
+    to: l.user.email,
+    learnerId: l.id,
+    ...nudgeEmailTemplate({ name: l.user.name || "there", loginUrl }),
+  }))
+  const result = await sendBatchEmails(emails)
+
+  for (const e of emails) {
+    await logEmail({ learnerId: e.learnerId, toEmail: e.to, subject: e.subject, body: e.html, category: "NUDGE", sentById: session.user.id })
+  }
 
   return NextResponse.json(result)
 }

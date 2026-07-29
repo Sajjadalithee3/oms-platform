@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendBatchEmails } from "@/lib/email"
 import { credentialsEmailTemplate } from "@/lib/email-templates"
+import { logEmail } from "@/lib/email-log"
 import bcrypt from "bcryptjs"
 
 function generatePassword(): string {
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
   }
 
   const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`
-  const emails = []
+  const emails: Array<{ to: string; subject: string; html: string; learnerId: string }> = []
   for (const learner of learners) {
     const password = generatePassword()
     const hashedPassword = await bcrypt.hash(password, 10)
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
     await prisma.learnerProfile.update({ where: { id: learner.id }, data: { credentialsSent: true } })
     emails.push({
       to: learner.user.email,
+      learnerId: learner.id,
       ...credentialsEmailTemplate({
         name: learner.user.name || "there",
         email: learner.user.email,
@@ -64,6 +66,10 @@ export async function POST(request: Request) {
   }
 
   const result = await sendBatchEmails(emails)
+
+  for (const e of emails) {
+    await logEmail({ learnerId: e.learnerId, toEmail: e.to, subject: e.subject, body: e.html, category: "CREDENTIALS", sentById: session.user.id })
+  }
 
   await prisma.auditLog.create({
     data: { userId: session.user.id, action: "UPDATE", entity: "LearnerProfile", entityId: learners[0].id, detail: `Sent login credentials to ${learners.length} learner(s)` },

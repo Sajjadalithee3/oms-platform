@@ -26,6 +26,7 @@ model User {
   sentMessages      Message[]         @relation("SentMessages")
   notifications     Notification[]
   auditLogs         AuditLog[]
+  sentEmailLogs     EmailLog[]
 }
 
 enum Role {
@@ -134,6 +135,20 @@ model LearnerProfile {
   certificates      Certificate[]
   applications      Application[]
   matches           JobMatch[]
+  emailLogs         EmailLog[]
+}
+
+model EmailLog {
+  id         String   @id @default(cuid())
+  learnerId  String?
+  learner    LearnerProfile? @relation(fields: [learnerId], references: [id])
+  toEmail    String
+  subject    String
+  body       String
+  category   String
+  sentById   String?
+  sentBy     User?    @relation(fields: [sentById], references: [id])
+  createdAt  DateTime @default(now())
 }
 
 model ProviderProfile {

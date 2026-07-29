@@ -147,6 +147,22 @@ export function dailyDigestEmailTemplate({
   }
 }
 
+export function composeEmailTemplate({
+  name,
+  subject,
+  message,
+}: {
+  name: string
+  subject: string
+  message: string
+}): EmailTemplate {
+  const htmlMessage = message.split("\n").filter((line) => line.trim().length > 0).map((line) => `<p>${line}</p>`).join("")
+  return {
+    subject,
+    html: wrapper(`<p>Hi ${name},</p>${htmlMessage}`),
+  }
+}
+
 export function bulkNotificationEmailTemplate({
   name,
   title,

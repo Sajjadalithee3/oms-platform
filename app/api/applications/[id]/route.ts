@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendEmail } from "@/lib/email"
 import { applicationStatusEmailTemplate } from "@/lib/email-templates"
+import { logEmail } from "@/lib/email-log"
 
 async function verifyApplicationAccess(applicationId: string, userId: string, userRole: string) {
   const application = await prisma.application.findUnique({
@@ -98,10 +99,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
   if (candidateUser?.email && app) {
     const link = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/${app.jobSeeker ? "jobseeker" : "learner"}/applications/${params.id}`
-    await sendEmail({
-      to: candidateUser.email,
-      ...applicationStatusEmailTemplate({ name: candidateUser.name || "there", jobTitle: app.job.title, company: app.job.company, status, link }),
-    })
+    const emailContent = applicationStatusEmailTemplate({ name: candidateUser.name || "there", jobTitle: app.job.title, company: app.job.company, status, link })
+    await sendEmail({ to: candidateUser.email, ...emailContent })
+    await logEmail({ learnerId: app.learner?.id || null, toEmail: candidateUser.email, subject: emailContent.subject, body: emailContent.html, category: "APPLICATION_STATUS", sentById: session.user.id })
   }
 
   await prisma.auditLog.create({

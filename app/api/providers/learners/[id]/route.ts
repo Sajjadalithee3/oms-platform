@@ -3,14 +3,15 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
-async function verifyProviderOwnership(userId: string, learnerId: string) {
-  const provider = await prisma.providerProfile.findUnique({ where: { userId } })
-  if (!provider) return null
+async function verifyProviderOwnership(userId: string, role: string, learnerId: string) {
   const learner = await prisma.learnerProfile.findUnique({
     where: { id: learnerId },
     include: { user: { select: { id: true, name: true, email: true } } },
   })
-  if (!learner || learner.providerId !== provider.id) return null
+  if (!learner) return null
+  if (role === "SUPER_ADMIN") return { provider: null, learner }
+  const provider = await prisma.providerProfile.findUnique({ where: { userId } })
+  if (!provider || learner.providerId !== provider.id) return null
   return { provider, learner }
 }
 
@@ -21,7 +22,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const ownership = await verifyProviderOwnership(session.user.id, params.id)
+  const ownership = await verifyProviderOwnership(session.user.id, session.user.role, params.id)
   if (!ownership) return NextResponse.json({ error: "Learner not found or not yours" }, { status: 404 })
 
   const body = await request.json()
@@ -88,7 +89,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const ownership = await verifyProviderOwnership(session.user.id, params.id)
+  const ownership = await verifyProviderOwnership(session.user.id, session.user.role, params.id)
   if (!ownership) return NextResponse.json({ error: "Learner not found or not yours" }, { status: 404 })
 
   const learnerId = params.id

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendBatchEmails } from "@/lib/email"
 import { bulkNotificationEmailTemplate } from "@/lib/email-templates"
+import { logEmail } from "@/lib/email-log"
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -49,14 +50,17 @@ export async function POST(request: Request) {
   let emailsSent = 0
   let emailsFailed = 0
   if (shouldEmail) {
-    const result = await sendBatchEmails(
-      learners.map((l) => ({
-        to: l.user.email,
-        ...bulkNotificationEmailTemplate({ name: l.user.name || "there", title, body: messageBody, link }),
-      }))
-    )
+    const emails = learners.map((l) => ({
+      to: l.user.email,
+      learnerId: l.id,
+      ...bulkNotificationEmailTemplate({ name: l.user.name || "there", title, body: messageBody, link }),
+    }))
+    const result = await sendBatchEmails(emails)
     emailsSent = result.sent
     emailsFailed = result.failed
+    for (const e of emails) {
+      await logEmail({ learnerId: e.learnerId, toEmail: e.to, subject: e.subject, body: e.html, category: "ANNOUNCEMENT", sentById: session.user.id })
+    }
   }
 
   return NextResponse.json({ notified: learners.length, emailsSent, emailsFailed })

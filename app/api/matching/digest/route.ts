@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { runAllMatching } from "@/lib/matching"
 import { sendBatchEmails } from "@/lib/email"
 import { dailyDigestEmailTemplate } from "@/lib/email-templates"
+import { logEmail } from "@/lib/email-log"
 
 const MIN_SCORE = 50
 const TOP_N = 5
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
   const learners = await prisma.learnerProfile.findMany({ include: { user: { select: { name: true, email: true } } } })
   const jobSeekers = await prisma.jobSeekerProfile.findMany({ include: { user: { select: { name: true, email: true } } } })
 
-  const emails: { to: string; subject: string; html: string }[] = []
+  const emails: { to: string; subject: string; html: string; learnerId?: string }[] = []
 
   for (const learner of learners) {
     const matches = await prisma.jobMatch.findMany({
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
     if (matches.length === 0) continue
     emails.push({
       to: learner.user.email,
+      learnerId: learner.id,
       ...dailyDigestEmailTemplate({
         name: learner.user.name || "there",
         matches: matches.map((m) => ({ title: m.job.title, company: m.job.company, score: m.matchScore, link: `${appUrl}/learner/jobs/${m.job.id}` })),
@@ -59,5 +61,12 @@ export async function GET(request: Request) {
   }
 
   const result = await sendBatchEmails(emails)
+
+  for (const e of emails) {
+    if (e.learnerId) {
+      await logEmail({ learnerId: e.learnerId, toEmail: e.to, subject: e.subject, body: e.html, category: "DIGEST" })
+    }
+  }
+
   return NextResponse.json({ candidatesChecked: learners.length + jobSeekers.length, digestsSent: result.sent, digestsFailed: result.failed })
 }

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { StatCard } from "@/components/dashboard/StatCard"
-import { Plus, Download, Award, Upload, FileText, Pencil, Trash2, AlertTriangle, CheckCircle2, Clock, UserX, Bell, Send, BookOpen } from "lucide-react"
+import { Plus, Download, Award, Upload, FileText, Pencil, Trash2, AlertTriangle, CheckCircle2, Clock, UserX, Bell, Send, BookOpen, MessageSquare, Mail } from "lucide-react"
 
 interface Learner {
   id: string
@@ -56,6 +56,16 @@ interface CVBulkResult {
 
 interface Course { id: string; name: string; sector: string }
 
+interface EmailLogEntry {
+  id: string
+  toEmail: string
+  subject: string
+  body: string
+  category: string
+  createdAt: string
+  sentBy: { name: string | null } | null
+}
+
 export default function ProviderLearnersPage() {
   const [learners, setLearners] = useState<Learner[]>([])
   const [cohorts, setCohorts] = useState<Cohort[]>([])
@@ -98,6 +108,21 @@ export default function ProviderLearnersPage() {
   const [notifyForm, setNotifyForm] = useState({ title: "", body: "", link: "", sendEmail: false })
   const [notifySending, setNotifySending] = useState(false)
   const [notifyResult, setNotifyResult] = useState<{ notified: number; emailsSent: number; emailsFailed: number } | null>(null)
+
+  const [conversationOpen, setConversationOpen] = useState(false)
+  const [conversationLearner, setConversationLearner] = useState<Learner | null>(null)
+  const [conversationEmails, setConversationEmails] = useState<EmailLogEntry[]>([])
+  const [conversationLoading, setConversationLoading] = useState(false)
+  const [composeSubject, setComposeSubject] = useState("")
+  const [composeMessage, setComposeMessage] = useState("")
+  const [composeSending, setComposeSending] = useState(false)
+
+  const [bulkComposeOpen, setBulkComposeOpen] = useState(false)
+  const [bulkComposeMode, setBulkComposeMode] = useState<"selected" | "course">("selected")
+  const [bulkComposeCourseName, setBulkComposeCourseName] = useState("")
+  const [bulkComposeSubject, setBulkComposeSubject] = useState("")
+  const [bulkComposeMessage, setBulkComposeMessage] = useState("")
+  const [bulkComposeSending, setBulkComposeSending] = useState(false)
 
   function refreshLearners() {
     fetch("/api/providers/learners").then((r) => r.json()).then(setLearners)
@@ -165,6 +190,59 @@ export default function ProviderLearnersPage() {
 
   function downloadCredentials() {
     window.open("/api/providers/learners/credentials", "_blank")
+  }
+
+  async function openConversation(learner: Learner) {
+    setConversationLearner(learner)
+    setConversationOpen(true)
+    setConversationLoading(true)
+    setComposeSubject("")
+    setComposeMessage("")
+    const res = await fetch(`/api/providers/learners/${learner.id}/emails`)
+    if (res.ok) setConversationEmails(await res.json())
+    setConversationLoading(false)
+  }
+
+  async function sendComposedEmail() {
+    if (!conversationLearner || !composeSubject || !composeMessage) return
+    setComposeSending(true)
+    const res = await fetch(`/api/providers/learners/${conversationLearner.id}/emails`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject: composeSubject, message: composeMessage }),
+    })
+    setComposeSending(false)
+    if (res.ok) {
+      setComposeSubject("")
+      setComposeMessage("")
+      const refreshed = await fetch(`/api/providers/learners/${conversationLearner.id}/emails`)
+      if (refreshed.ok) setConversationEmails(await refreshed.json())
+    }
+  }
+
+  async function sendBulkCompose() {
+    if (!bulkComposeSubject || !bulkComposeMessage) return
+    if (bulkComposeMode === "selected" && selectedIds.size === 0) return
+    if (bulkComposeMode === "course" && !bulkComposeCourseName) return
+    setBulkComposeSending(true)
+    const payload: Record<string, unknown> = { subject: bulkComposeSubject, message: bulkComposeMessage }
+    if (bulkComposeMode === "course") payload.courseName = bulkComposeCourseName
+    else payload.learnerIds = Array.from(selectedIds)
+    const res = await fetch("/api/providers/learners/compose", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+    setBulkComposeSending(false)
+    if (res.ok) {
+      const data = await res.json()
+      alert(`Email sent to ${data.sent} learner${data.sent !== 1 ? "s" : ""}${data.failed ? `, ${data.failed} failed` : ""}.`)
+      setBulkComposeOpen(false)
+      setBulkComposeSubject("")
+      setBulkComposeMessage("")
+      setBulkComposeCourseName("")
+    } else {
+      const data = await res.json().catch(() => ({}))
+      alert(data.error || "Failed to send")
+    }
   }
 
   function openEditDialog(learner: Learner) {
@@ -442,6 +520,9 @@ export default function ProviderLearnersPage() {
       key: "actions", label: "Actions", sortable: false,
       render: (row) => (
         <div className="flex gap-1">
+          <button onClick={(e) => { e.stopPropagation(); openConversation(row) }} className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-[#5B4FE8]" title="Conversation">
+            <MessageSquare className="h-4 w-4" />
+          </button>
           <button onClick={(e) => { e.stopPropagation(); openEditDialog(row) }} className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-[#5B4FE8]" title="Edit learner">
             <Pencil className="h-4 w-4" />
           </button>
@@ -452,6 +533,8 @@ export default function ProviderLearnersPage() {
       ),
     },
   ]
+
+  const courseNames = Array.from(new Set(learners.map((l) => l.courseName).filter((c): c is string => !!c)))
 
   return (
     <>
@@ -484,6 +567,9 @@ export default function ProviderLearnersPage() {
               <Bell className="h-4 w-4 mr-2" />{nudgingAll ? "Sending..." : `Nudge All (${neverLoggedInCount})`}
             </Button>
           )}
+          <Button variant="outline" onClick={() => { setBulkComposeMode(selectedIds.size > 0 ? "selected" : "course"); setBulkComposeSubject(""); setBulkComposeMessage(""); setBulkComposeCourseName(""); setBulkComposeOpen(true) }}>
+            <Mail className="h-4 w-4 mr-2" />Compose Email
+          </Button>
           <Button variant="outline" onClick={downloadCredentials}>
             <Download className="h-4 w-4 mr-2" />Download Credentials
           </Button>
@@ -789,6 +875,75 @@ export default function ProviderLearnersPage() {
             </div>
             <Button onClick={assignCourse} disabled={!assignCourseId || assigningCourse} className="w-full">
               {assigningCourse ? "Assigning..." : "Assign Course"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Conversation Dialog */}
+      <Dialog open={conversationOpen} onOpenChange={setConversationOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>Conversation with {conversationLearner?.user.name}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="max-h-72 overflow-y-auto space-y-2 border rounded-md p-3 bg-gray-50">
+              {conversationLoading ? (
+                <p className="text-sm text-gray-400">Loading...</p>
+              ) : conversationEmails.length === 0 ? (
+                <p className="text-sm text-gray-400">No emails sent yet.</p>
+              ) : (
+                conversationEmails.map((e) => (
+                  <div key={e.id} className="bg-white border rounded-md p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{e.subject}</span>
+                      <Badge variant="secondary" className="text-xs shrink-0">{e.category}</Badge>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(e.createdAt).toLocaleString()} &middot; {e.sentBy?.name ? `by ${e.sentBy.name}` : "automated"}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="space-y-2 border-t pt-4">
+              <div><Label>Subject</Label><Input value={composeSubject} onChange={(e) => setComposeSubject(e.target.value)} placeholder="Email subject" /></div>
+              <div><Label>Message</Label><Textarea value={composeMessage} onChange={(e) => setComposeMessage(e.target.value)} placeholder="Write your message..." rows={4} /></div>
+              <Button onClick={sendComposedEmail} disabled={composeSending || !composeSubject || !composeMessage} className="w-full">
+                {composeSending ? "Sending..." : "Send Email"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Compose Dialog */}
+      <Dialog open={bulkComposeOpen} onOpenChange={setBulkComposeOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Compose Email</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Send to</Label>
+              <Select value={bulkComposeMode} onChange={(e) => setBulkComposeMode(e.target.value as "selected" | "course")}>
+                <option value="selected">Selected learners ({selectedIds.size})</option>
+                <option value="course">All learners in a course</option>
+              </Select>
+            </div>
+            {bulkComposeMode === "course" && (
+              <div>
+                <Label>Course</Label>
+                <Select value={bulkComposeCourseName} onChange={(e) => setBulkComposeCourseName(e.target.value)}>
+                  <option value="">Select course...</option>
+                  {courseNames.map((c) => <option key={c} value={c}>{c}</option>)}
+                </Select>
+              </div>
+            )}
+            <div><Label>Subject</Label><Input value={bulkComposeSubject} onChange={(e) => setBulkComposeSubject(e.target.value)} placeholder="Email subject" /></div>
+            <div><Label>Message</Label><Textarea value={bulkComposeMessage} onChange={(e) => setBulkComposeMessage(e.target.value)} placeholder="Write your message..." rows={5} /></div>
+            <Button
+              onClick={sendBulkCompose}
+              disabled={bulkComposeSending || !bulkComposeSubject || !bulkComposeMessage || (bulkComposeMode === "selected" ? selectedIds.size === 0 : !bulkComposeCourseName)}
+              className="w-full"
+            >
+              {bulkComposeSending ? "Sending..." : "Send Email"}
             </Button>
           </div>
         </DialogContent>
