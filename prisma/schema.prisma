@@ -57,6 +57,8 @@ model EmployerProfile {
   updatedAt       DateTime  @updatedAt
   jobs            Job[]
   interviews      Interview[]
+  agreements      EmployerAgreement[]
+  profileViews    CandidateProfileView[]
 }
 
 model JobSeekerProfile {
@@ -319,6 +321,30 @@ model Application {
   updatedAt         DateTime  @updatedAt
   messages          Message[]
   interviews        Interview[]
+  agreement         EmployerAgreement?
+  profileViews      CandidateProfileView[]
+}
+
+model EmployerAgreement {
+  id            String   @id @default(cuid())
+  employerId    String
+  employer      EmployerProfile @relation(fields: [employerId], references: [id])
+  applicationId String   @unique
+  application   Application @relation(fields: [applicationId], references: [id])
+  jobTitle      String
+  candidateName String
+  agreedAt      DateTime @default(now())
+}
+
+model CandidateProfileView {
+  id            String   @id @default(cuid())
+  employerId    String
+  employer      EmployerProfile @relation(fields: [employerId], references: [id])
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  jobTitle      String
+  candidateName String
+  viewedAt      DateTime @default(now())
 }
 
 model Message {

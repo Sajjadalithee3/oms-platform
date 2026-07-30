@@ -50,7 +50,36 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   })
 
   if (!application) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  return NextResponse.json(application)
+
+  if (session.user.role === "EMPLOYER") {
+    const agreement = await prisma.employerAgreement.findUnique({ where: { applicationId: params.id } })
+    if (!agreement) {
+      return NextResponse.json({
+        id: application.id,
+        jobId: application.jobId,
+        job: { title: application.job.title, company: application.job.company },
+        status: application.status,
+        createdAt: application.createdAt,
+        agreementRequired: true,
+      })
+    }
+
+    const employerId = access.job.employer?.id
+    if (employerId) {
+      const startOfToday = new Date()
+      startOfToday.setUTCHours(0, 0, 0, 0)
+      const viewedToday = await prisma.candidateProfileView.findFirst({
+        where: { employerId, applicationId: params.id, viewedAt: { gte: startOfToday } },
+      })
+      if (!viewedToday) {
+        await prisma.candidateProfileView.create({
+          data: { employerId, applicationId: params.id, jobTitle: agreement.jobTitle, candidateName: agreement.candidateName },
+        })
+      }
+    }
+  }
+
+  return NextResponse.json({ ...application, agreementRequired: false })
 }
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {

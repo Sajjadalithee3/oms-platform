@@ -17,6 +17,7 @@ interface ApplicationDetail {
   jobSeeker?: { id: string; user: { name: string; email: string }; skills: string; location: string | null; headline: string | null; experiences: Array<{ title: string; company: string }> } | null
   learner?: { id: string; user: { name: string; email: string }; skills: string; location: string | null; courseName: string | null; experiences: Array<{ title: string; company: string }> } | null
   interviews: Array<{ id: string; proposedSlots: string; confirmedSlot: string | null; status: string; location: string | null; meetingLink: string | null; notes: string | null }>
+  agreementRequired?: boolean
 }
 
 export default function EmployerApplicationDetailPage() {
@@ -24,11 +25,20 @@ export default function EmployerApplicationDetailPage() {
   const router = useRouter()
   const { data: session } = useSession()
   const [app, setApp] = useState<ApplicationDetail | null>(null)
+  const [agreed, setAgreed] = useState(false)
+  const [agreeing, setAgreeing] = useState(false)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadApp() }, [params.id])
 
   function loadApp() { fetch(`/api/applications/${params.id}`).then((r) => r.json()).then(setApp) }
+
+  async function agreeAndView() {
+    setAgreeing(true)
+    await fetch(`/api/applications/${params.id}/agreement`, { method: "POST" })
+    setAgreeing(false)
+    loadApp()
+  }
 
   async function updateStatus(status: string) {
     await fetch(`/api/applications/${params.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) })
@@ -36,6 +46,39 @@ export default function EmployerApplicationDetailPage() {
   }
 
   if (!app) return <div className="p-6">Loading...</div>
+
+  if (app.agreementRequired) {
+    return (
+      <>
+        <TopBar title={`Application: ${app.job.title}`} notificationCount={0} />
+        <div className="p-6 max-w-xl mx-auto">
+          <button type="button" onClick={() => router.back()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"><ArrowLeft className="h-4 w-4" />Back</button>
+          <div className="bg-white rounded-lg border p-6 space-y-4">
+            <h2 className="text-lg font-bold">Before you view this candidate</h2>
+            <p className="text-sm text-gray-600">
+              A candidate has applied to <strong>{app.job.title}</strong> at {app.job.company}. Please confirm the following before viewing their profile.
+            </p>
+            <div className="bg-gray-50 border rounded-md p-4 text-sm text-gray-700 space-y-2">
+              <p className="font-medium">By proceeding, I confirm that:</p>
+              <ul className="list-disc list-inside space-y-1.5">
+                <li>The job listing above is a genuine, currently active vacancy that I am authorised to recruit for.</li>
+                <li>I intend to review this candidate in good faith for potential employment, and will not use their personal information for any other purpose.</li>
+                <li>I will handle the candidate&apos;s personal data in accordance with UK GDPR, and will not share, sell, or redistribute their details outside my organisation&apos;s genuine recruitment process.</li>
+                <li>I understand this confirmation is logged and may be reviewed by EdvanceFE for compliance purposes.</li>
+              </ul>
+            </div>
+            <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5" />
+              I have read and agree to the above.
+            </label>
+            <Button onClick={agreeAndView} disabled={!agreed || agreeing} className="w-full">
+              {agreeing ? "Confirming..." : "Agree & View Candidate"}
+            </Button>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   const candidate = app.jobSeeker || app.learner
   const skills: string[] = candidate ? JSON.parse(candidate.skills || "[]") : []

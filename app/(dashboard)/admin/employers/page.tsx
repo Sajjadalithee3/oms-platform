@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { TopBar } from "@/components/dashboard/TopBar"
 import { DataTable, Column } from "@/components/shared/DataTable"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -23,6 +24,7 @@ interface Employer {
 const INDUSTRIES = ["Technology", "Health & Social Care", "Education", "Finance", "Construction", "Retail", "Manufacturing", "Hospitality"]
 
 export default function AdminEmployersPage() {
+  const router = useRouter()
   const [employers, setEmployers] = useState<Employer[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -113,7 +115,7 @@ export default function AdminEmployersPage() {
             </DialogContent>
           </Dialog>
         </div>
-        <DataTable columns={columns} data={employers} exportFilename="employers" searchPlaceholder="Search employers..." />
+        <DataTable columns={columns} data={employers} exportFilename="employers" searchPlaceholder="Search employers..." onRowClick={(r) => router.push(`/admin/employers/${r.id}`)} />
       </div>
     </>
   )
