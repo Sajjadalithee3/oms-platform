@@ -27,7 +27,7 @@ export default auth((req) => {
   const session = req.auth
 
   if (
-    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon")
   ) {
