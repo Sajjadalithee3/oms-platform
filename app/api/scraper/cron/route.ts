@@ -26,17 +26,15 @@ export async function GET(request: Request) {
 
     if (board.schedule === "HOURLY") return true
 
+    // Cron only fires once/day (see vercel.json), so matching the whole scheduled
+    // hour (not a narrow minute window) is safe and tolerates Vercel's invocation
+    // timing drift instead of silently skipping the board for the entire day.
     if (board.schedule === "DAILY" || !board.schedule) {
-      const schedMin = scheduleTime.split(":")[1] || "00"
-      const curMin = currentTime.split(":")[1]
-      return Math.abs(parseInt(curMin) - parseInt(schedMin)) <= 5
+      return true
     }
 
     if (board.schedule === "WEEKLY") {
-      if (now.getUTCDay() !== 1) return false
-      const schedMin = scheduleTime.split(":")[1] || "00"
-      const curMin = currentTime.split(":")[1]
-      return Math.abs(parseInt(curMin) - parseInt(schedMin)) <= 5
+      return now.getUTCDay() === 1
     }
 
     return false
